@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le Vestiaire d’Aya</title>
+<meta name="theme-color" content="#0f8a67">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vestiaire">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2064%2064'%3E%3Crect%20width%3D'64'%20height%3D'64'%20rx%3D'16'%20fill%3D'%230f8a67'%2F%3E%3Ctext%20x%3D'32'%20y%3D'44'%20font-family%3D'Arial'%20font-weight%3D'900'%20font-size%3D'34'%20text-anchor%3D'middle'%20fill%3D'white'%3EA%3C%2Ftext%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-who="aya">
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i aria-hidden="true"></i>Le Vestiaire</div>
+    <span class="who-tag">· Aya</span>
+    <button class="pill" id="syncPill" data-state="local">○ Entrer mon code</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div>
+    <section class="card hero" id="hero"></section>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="prog" id="tab-prog">Programme sport</button>
+      <button role="tab" aria-selected="false" data-tab="nut" id="tab-nut">Nutrition</button>
+      <button role="tab" aria-selected="false" data-tab="suivi" id="tab-suivi">Suivi & trajectoire</button>
+    </div>
+
+    <section class="panel" id="p-prog" role="tabpanel"></section>
+    <section class="panel" id="p-nut" role="tabpanel" hidden></section>
+    <section class="panel" id="p-suivi" role="tabpanel" hidden></section>
+  </div>
+
+  <aside class="card coach" id="coach" aria-label="Coach">
+    <div class="coach-h">
+      <div class="ph">CO</div>
+      <div><b>Ton coach</b><small id="coachSub">Pose tes questions, je connais ton programme</small></div>
+      <button class="x" id="coachClose" aria-label="Fermer le coach">✕</button>
+    </div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="sugg" id="sugg"></div>
+    <form class="compose" id="compose">
+      <input id="q" autocomplete="off" placeholder="Ex. : je n’ai que 30 minutes aujourd’hui" aria-label="Ta question au coach">
+      <button type="submit">Envoyer</button>
+    </form>
+  </aside>
+
+  <footer>Programme personnel de Aya, établi pour une femme de 24 ans en bonne santé. En cas de douleur, de fatigue inhabituelle ou de question médicale, demande l’avis d’un médecin.</footer>
+</main>
+
+<button class="fab" id="fab">Parler au coach</button>
+
+<div class="player" id="player" role="dialog" aria-modal="true" aria-label="Mode séance">
+  <div class="card pl" id="pl"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lockT">
+  <form class="card" id="lockForm">
+    <div class="eyebrow">Le Vestiaire</div>
+    <h2 id="lockT">Bienvenue Aya</h2>
+    <p>Entre ton code personnel pour sauvegarder tes pesées et tes séances sur tous tes appareils, et parler au coach.</p>
+    <label for="pinIn" class="sr" style="position:absolute;left:-9999px">Code personnel</label>
+    <input id="pinIn" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+    <div class="err" id="pinErr" aria-live="polite"></div>
+    <button class="btn" type="submit">Valider</button>
+    <button class="later" type="button" id="lockLater">Plus tard, juste consulter</button>
+  </form>
+</div>
+
+<script>const P = {
+ "aya": {
+  "key": "aya",
+  "name": "Aya",
+  "age": 24,
+  "h": 1.65,
+  "w0": 76,
+  "goal": 61,
+  "level": "Débutante",
+  "freq": 4,
+  "tagline": "Retrouver l’osmose : affiner le haut du corps, sculpter fessiers et cuisses.",
+  "chips": [
+   "1,65 m",
+   "24 ans",
+   "Débutante",
+   "4 séances / semaine",
+   "Ancien max : 108 kg",
+   "Déjà −30 kg"
+  ],
+  "kcal": 1700,
+  "Pg": 120,
+  "Gg": 180,
+  "Lg": 55,
+  "steps": "8 000 → 10 000 pas",
+  "water": "2,5 L",
+  "rate": 0.55,
+  "rateAfter": null,
+  "milestones": [
+   {
+    "kg": 72,
+    "label": "−5 kg"
+   },
+   {
+    "kg": 70,
+    "label": "Ton plus bas historique"
+   }
+  ],
+  "deadlines": [],
+  "note": {
+   "t": "Le mot du coach",
+   "p": "Tu as déjà perdu 30 kg : la discipline, tu l’as. Maintenant on change de mission : construire. Le corps ne choisit pas où il perd sa graisse, donc ventre, bras et dos vont s’affiner avec la perte globale, pendant que deux séances par semaine construisent fessiers et cuisses. La silhouette se rééquilibre avant même d’atteindre 61 kg. Comme tu vas prendre du muscle en bas, la balance descendra un peu plus lentement : mesure aussi ton tour de taille, c’est lui qui dira la vérité."
+  },
+  "phases": [
+   {
+    "n": "Fondations",
+    "w": "Semaines 1 à 4",
+    "from": 1,
+    "txt": "On apprend les gestes. Charges légères, garde 3 répétitions en réserve à chaque série. Objectif : zéro douleur, technique propre."
+   },
+   {
+    "n": "Construction",
+    "w": "Semaines 5 à 12",
+    "from": 5,
+    "txt": "Dès que tu réussis toutes les séries avec la bonne technique, ajoute 1 à 2 kg. Garde 1 à 2 répétitions en réserve."
+   },
+   {
+    "n": "Sculpture",
+    "w": "Semaine 13 et +",
+    "from": 13,
+    "txt": "Hip thrust et squat plus lourds, volume fessiers au maximum. C’est là que la forme se dessine."
+   }
+  ],
+  "sessions": [
+   {
+    "day": "Lun",
+    "title": "Bas du corps A",
+    "focus": "Fessiers",
+    "dur": "60 min",
+    "warm": "5 min de vélo, 2 × 15 ponts fessiers et 2 × 10 pas latéraux avec élastique.",
+    "ex": [
+     {
+      "n": "Hip thrust (barre ou machine)",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        4,
+        "10"
+       ],
+       [
+        4,
+        "8"
+       ]
+      ],
+      "r": 90,
+      "c": "Menton rentré, pousse dans les talons, bloque 1 seconde en haut en serrant les fessiers."
+     },
+     {
+      "n": "Squat gobelet",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        4,
+        "10"
+       ],
+       [
+        4,
+        "8"
+       ]
+      ],
+      "r": 90,
+      "c": "Pieds un peu plus larges que les hanches, descends entre tes talons, buste fier."
+     },
+     {
+      "n": "Fente arrière haltères",
+      "p": [
+       [
+        3,
+        "10 / jambe"
+       ],
+       [
+        3,
+        "10 / jambe"
+       ],
+       [
+        4,
+        "8 / jambe"
+       ]
+      ],
+      "r": 75,
+      "c": "Buste légèrement penché en avant pour charger le fessier de la jambe avant."
+     },
+     {
+      "n": "Abduction machine",
+      "p": [
+       [
+        3,
+        "15"
+       ],
+       [
+        3,
+        "15-20"
+       ],
+       [
+        3,
+        "20 + 10 partielles"
+       ]
+      ],
+      "r": 45,
+      "c": "Penche-toi un peu en avant, contrôle le retour en 2 secondes."
+     },
+     {
+      "n": "Kickback à la poulie",
+      "p": [
+       [
+        3,
+        "12 / jambe"
+       ],
+       [
+        3,
+        "15 / jambe"
+       ],
+       [
+        3,
+        "15 / jambe"
+       ]
+      ],
+      "r": 45,
+      "c": "Bassin immobile, la jambe part en arrière et légèrement en diagonale."
+     },
+     {
+      "n": "Marche inclinée",
+      "cardio": [
+       "15 min · pente 8 % · 5 km/h",
+       "20 min · pente 10 % · 5 km/h",
+       "20 min · pente 12 % · 5 km/h"
+      ],
+      "c": "Lâche les barres du tapis : c’est là que tu brûles."
+     }
+    ]
+   },
+   {
+    "day": "Mar",
+    "title": "Haut du corps & gainage",
+    "focus": "Dos, bras, ventre",
+    "dur": "55 min",
+    "warm": "5 min de rameur, rotations d’épaules, 2 × 12 tirages élastique.",
+    "ex": [
+     {
+      "n": "Tirage vertical prise large",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        3,
+        "10"
+       ],
+       [
+        4,
+        "10"
+       ]
+      ],
+      "r": 75,
+      "c": "Tire les coudes vers tes poches, poitrine vers la barre."
+     },
+     {
+      "n": "Rowing haltère un bras",
+      "p": [
+       [
+        3,
+        "12 / bras"
+       ],
+       [
+        3,
+        "10 / bras"
+       ],
+       [
+        4,
+        "10 / bras"
+       ]
+      ],
+      "r": 60,
+      "c": "Dos plat, tire le coude vers la hanche, pas vers l’épaule."
+     },
+     {
+      "n": "Développé incliné haltères",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        3,
+        "10"
+       ],
+       [
+        3,
+        "10"
+       ]
+      ],
+      "r": 75,
+      "c": "Omoplates serrées, descends lentement jusqu’au niveau de la poitrine."
+     },
+     {
+      "n": "Élévations latérales",
+      "p": [
+       [
+        3,
+        "15"
+       ],
+       [
+        3,
+        "15"
+       ],
+       [
+        4,
+        "15"
+       ]
+      ],
+      "r": 45,
+      "c": "Monte jusqu’à hauteur d’épaules, charges légères, pas d’élan."
+     },
+     {
+      "n": "Superset curl + extension triceps",
+      "p": [
+       [
+        2,
+        "15 + 15"
+       ],
+       [
+        3,
+        "12 + 12"
+       ],
+       [
+        3,
+        "12 + 12"
+       ]
+      ],
+      "r": 60,
+      "c": "Enchaîne les deux exercices sans pause, puis repos."
+     },
+     {
+      "n": "Planche + dead bug",
+      "p": [
+       [
+        3,
+        "30 s + 10"
+       ],
+       [
+        3,
+        "40 s + 12"
+       ],
+       [
+        3,
+        "50 s + 14"
+       ]
+      ],
+      "r": 45,
+      "c": "Nombril rentré ; sur le dead bug, le bas du dos reste collé au sol."
+     },
+     {
+      "n": "Vélo ou elliptique",
+      "cardio": [
+       "15 min · zone 2 (tu peux parler)",
+       "20 min · zone 2",
+       "20 min · zone 2"
+      ],
+      "c": "Rythme confortable mais soutenu : tu dois pouvoir tenir une conversation."
+     }
+    ]
+   },
+   {
+    "day": "Jeu",
+    "title": "Bas du corps B",
+    "focus": "Cuisses & ischios",
+    "dur": "60 min",
+    "warm": "5 min de marche inclinée, 2 × 10 good mornings à vide, 2 × 10 squats poids du corps.",
+    "ex": [
+     {
+      "n": "Soulevé de terre roumain haltères",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        4,
+        "10"
+       ],
+       [
+        4,
+        "8"
+       ]
+      ],
+      "r": 90,
+      "c": "Hanches vers l’arrière, les haltères frôlent les cuisses, dos neutre."
+     },
+     {
+      "n": "Presse à cuisses pieds hauts",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        4,
+        "10"
+       ],
+       [
+        4,
+        "10"
+       ]
+      ],
+      "r": 90,
+      "c": "Pieds hauts et écartés sur la plateforme : plus de fessiers, moins de quadriceps."
+     },
+     {
+      "n": "Step-up sur banc",
+      "p": [
+       [
+        3,
+        "10 / jambe"
+       ],
+       [
+        3,
+        "12 / jambe"
+       ],
+       [
+        4,
+        "10 / jambe"
+       ]
+      ],
+      "r": 60,
+      "c": "Pousse uniquement avec la jambe posée sur le banc."
+     },
+     {
+      "n": "Leg curl",
+      "p": [
+       [
+        3,
+        "12"
+       ],
+       [
+        3,
+        "12"
+       ],
+       [
+        4,
+        "10"
+       ]
+      ],
+      "r": 60,
+      "c": "Contrôle la descente en 3 secondes."
+     },
+     {
+      "n": "Pont fessier unilatéral",
+      "p": [
+       [
+        2,
+        "12 / jambe"
+       ],
+       [
+        3,
+        "12 / jambe"
+       ],
+       [
+        3,
+        "15 / jambe"
+       ]
+      ],
+      "r": 45,
+      "c": "Bassin bien horizontal, pause en haut."
+     },
+     {
+      "n": "Intervalles sur tapis",
+      "cardio": [
+       "10 min · 1 min rapide pente 10 % / 1 min lente",
+       "12 min · même format",
+       "14 min · même format"
+      ],
+      "c": "Rapide = marche très soutenue, pas de course obligatoire."
+     }
+    ]
+   },
+   {
+    "day": "Sam",
+    "title": "Full body brûle-graisse",
+    "focus": "Circuit + fessiers",
+    "dur": "50 min",
+    "warm": "5 min de vélo, 10 squats, 10 pompes contre un banc, 20 jumping jacks.",
+    "ex": [
+     {
+      "n": "Circuit 6 exercices",
+      "p": [
+       [
+        3,
+        "tours"
+       ],
+       [
+        4,
+        "tours"
+       ],
+       [
+        4,
+        "tours"
+       ]
+      ],
+      "r": 90,
+      "c": "Squat gobelet 12 · pompes inclinées 10 · kettlebell swing 15 · rowing TRX 12 · fentes marchées 10/jambe · mountain climbers 30 s. Sans pause entre les exercices."
+     },
+     {
+      "n": "Hip thrust « pump »",
+      "p": [
+       [
+        2,
+        "20"
+       ],
+       [
+        2,
+        "20"
+       ],
+       [
+        3,
+        "20"
+       ]
+      ],
+      "r": 45,
+      "c": "Charge légère, tension continue, pas de pause en bas."
+     },
+     {
+      "n": "Marche inclinée",
+      "cardio": [
+       "20 min · pente 8 %",
+       "25 min · pente 10 %",
+       "30 min · pente 10-12 %"
+      ],
+      "c": "Écouteurs, podcast, et on avance."
+     }
+    ]
+   }
+  ],
+  "meals": [
+   {
+    "k": "Petit-déjeuner",
+    "h": "7h-9h",
+    "opts": [
+     {
+      "n": "Bowl skyr & avoine",
+      "l": [
+       "250 g de skyr nature",
+       "40 g de flocons d’avoine",
+       "½ banane",
+       "10 g de beurre de cacahuète"
+      ],
+      "kcal": 420,
+      "p": 34
+     },
+     {
+      "n": "Œufs & pain complet",
+      "l": [
+       "2 œufs + 2 blancs",
+       "70 g de pain complet",
+       "1 fruit"
+      ],
+      "kcal": 405,
+      "p": 28
+     },
+     {
+      "n": "Pancakes protéinés",
+      "l": [
+       "40 g d’avoine mixée",
+       "1 œuf + 150 g de fromage blanc 0 %",
+       "100 g de myrtilles, 1 cc de miel"
+      ],
+      "kcal": 380,
+      "p": 25
+     }
+    ]
+   },
+   {
+    "k": "Déjeuner",
+    "h": "12h-13h30",
+    "opts": [
+     {
+      "n": "Poulet, riz & légumes",
+      "l": [
+       "150 g de poulet",
+       "180 g de riz basmati cuit",
+       "Légumes à volonté",
+       "1 cs d’huile d’olive"
+      ],
+      "kcal": 540,
+      "p": 52
+     },
+     {
+      "n": "Bowl saumon quinoa",
+      "l": [
+       "120 g de saumon",
+       "150 g de quinoa cuit",
+       "¼ d’avocat, concombre",
+       "50 g d’edamame"
+      ],
+      "kcal": 570,
+      "p": 40
+     },
+     {
+      "n": "Wrap dinde feta",
+      "l": [
+       "1 grande tortilla complète",
+       "120 g de dinde",
+       "30 g de feta, crudités",
+       "Sauce yaourt-citron"
+      ],
+      "kcal": 480,
+      "p": 40
+     }
+    ]
+   },
+   {
+    "k": "Collation",
+    "h": "16h ou après séance",
+    "opts": [
+     {
+      "n": "Fromage blanc & amandes",
+      "l": [
+       "200 g de fromage blanc 0 %",
+       "15 g d’amandes"
+      ],
+      "kcal": 190,
+      "p": 19
+     },
+     {
+      "n": "Shaker & pomme",
+      "l": [
+       "30 g de whey",
+       "1 pomme"
+      ],
+      "kcal": 175,
+      "p": 24
+     },
+     {
+      "n": "Galettes de riz & jambon",
+      "l": [
+       "2 galettes de riz",
+       "2 tranches de jambon blanc",
+       "1 carré de chocolat noir"
+      ],
+      "kcal": 195,
+      "p": 15
+     }
+    ]
+   },
+   {
+    "k": "Dîner",
+    "h": "19h-21h",
+    "opts": [
+     {
+      "n": "Cabillaud & patate douce",
+      "l": [
+       "150 g de cabillaud",
+       "200 g de patate douce",
+       "Haricots verts",
+       "1 cs d’huile + 1 yaourt nature"
+      ],
+      "kcal": 480,
+      "p": 36
+     },
+     {
+      "n": "Pâtes bolognaise maison",
+      "l": [
+       "125 g de steak haché 5 %",
+       "70 g de pâtes complètes (cru)",
+       "Sauce tomate, courgettes",
+       "15 g de parmesan"
+      ],
+      "kcal": 520,
+      "p": 43
+     },
+     {
+      "n": "Omelette garnie",
+      "l": [
+       "3 œufs + légumes poêlés",
+       "150 g de pommes de terre",
+       "30 g d’emmental, salade",
+       "1 cs d’huile"
+      ],
+      "kcal": 575,
+      "p": 32
+     }
+    ]
+   }
+  ],
+  "rules": [
+   [
+    "Une protéine à chaque repas",
+    "Viande, poisson, œufs, skyr, fromage blanc, tofu : c’est ce qui construit le fessier et coupe la faim."
+   ],
+   [
+    "Les glucides autour des séances jambes",
+    "Lundi et jeudi, ajoute 50 g de riz ou de patate douce au repas qui suit la séance."
+   ],
+   [
+    "La moitié de l’assiette en légumes",
+    "Midi et soir. Du volume, des fibres, très peu de calories."
+   ],
+   [
+    "2,5 L d’eau par jour",
+    "Une gourde de 1 L le matin, une l’après-midi, le reste aux repas."
+   ],
+   [
+    "Un repas plaisir par semaine",
+    "Sans culpabilité. Le repas suivant, on reprend le plan normalement."
+   ]
+  ],
+  "shop": {
+   "Protéines": [
+    "Blancs de poulet / dinde",
+    "Cabillaud, saumon",
+    "Steak haché 5 %",
+    "Œufs (x 18)",
+    "Skyr, fromage blanc 0 %"
+   ],
+   "Féculents": [
+    "Riz basmati",
+    "Flocons d’avoine",
+    "Patates douces",
+    "Pâtes complètes, quinoa",
+    "Pain complet"
+   ],
+   "Fruits & légumes": [
+    "Haricots verts, courgettes",
+    "Brocolis, salade",
+    "Bananes, pommes",
+    "Myrtilles (surgelées)",
+    "Avocat, concombre"
+   ],
+   "Placard": [
+    "Huile d’olive",
+    "Beurre de cacahuète",
+    "Amandes",
+    "Chocolat noir 70 %",
+    "Whey (facultatif)"
+   ]
+  },
+  "faq": {
+   "Pourquoi je ne perds pas que du ventre ?": "Personne ne peut cibler la perte de graisse sur une zone. Le ventre, les bras et le dos s’affinent avec la perte globale. Ce qu’on peut cibler, c’est le muscle : c’est pour ça que tu as deux séances bas du corps. Mesure ton tour de taille chaque semaine, c’est souvent lui qui bouge avant la balance.",
+   "Je n’ai pas de salle aujourd’hui": "Séance maison 30 min : 4 tours de 15 ponts fessiers, 12 squats sumo, 10 fentes arrière par jambe, 10 pompes sur les genoux, 30 s de planche. 60 s de repos entre les tours, puis 30 min de marche rapide dehors.",
+   "J’ai faim le soir": "Ajoute du volume sans calories : une grosse soupe de légumes ou une salade avant le dîner. Garde ta collation protéinée entre 16h et 17h. Et vérifie ton eau : la soif ressemble souvent à la faim.",
+   "J’ai craqué ce week-end": "Un week-end ne défait pas un mois. Pas de compensation, pas de jeûne : tu reprends ton plan dès le prochain repas. La balance montera peut-être 2 jours (eau et sel), puis elle redescend.",
+   "La balance ne bouge pas": "Regarde la moyenne sur 2 semaines, pas un jour. Avec la prise de muscle en bas, le poids peut stagner pendant que la taille diminue. Si rien ne bouge en 3 semaines (poids et tour de taille), on retire 100 kcal."
+  },
+  "profil": "Profil : débutante, ancien poids max 108 kg (déjà −30 kg), plus bas 70 kg. Veut perdre du gras en général (ventre, bras, dos) et prendre un peu de muscle aux fessiers et cuisses ; haut du corps déjà fort. Marche au quotidien, disponible tous les jours, dort 8 h, mange équilibré 2 à 3 repas. Très motivée."
+ }
+};</script>
+<script src="app.js"></script>
+
+</body>
+</html>
