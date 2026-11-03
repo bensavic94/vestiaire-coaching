@@ -73,6 +73,15 @@
     <button class="later" type="button" id="lockLater">Plus tard, juste consulter</button>
   </form>
 </div>
+<div class="sheet" id="guide" role="dialog" aria-modal="true" aria-label="Comment faire l’exercice"><div class="card" id="guideIn"></div></div>
+<div class="sheet" id="lib" role="dialog" aria-modal="true" aria-label="Toutes les questions"><div class="card">
+  <button class="close" data-sheetclose="1" aria-label="Fermer">✕</button>
+  <div class="eyebrow">Ton coach</div><h2>Toutes les réponses</h2>
+  <label for="libQ" style="position:absolute;left:-9999px">Rechercher une question</label>
+  <input id="libQ" class="lib-search" placeholder="Rechercher : faim, genou, alcool, balance…" autocomplete="off">
+  <div class="lib-cats" id="libCats"></div>
+  <div class="lib-list" id="libList"></div>
+</div></div>
 
 <script>const P = {
  "camelia": {
@@ -797,13 +806,80 @@
     "Whey (facultatif)"
    ]
   },
-  "faq": {
-   "Et si je stagne avant l’essayage ?": "Regarde la moyenne sur 2 semaines. Si elle ne bouge pas : vérifie d’abord sommeil et pesée des aliments. Ensuite seulement, on ajoute 2 000 pas par jour ou 10 min de tapis incliné. On ne descend pas sous 1 400 kcal.",
-   "Les escaliers me fatiguent": "C’est exactement le rôle de la séance du mardi. En 3 à 4 semaines, tu vas sentir la différence. En plus, prends les escaliers dès que tu peux, à ton rythme, même en t’arrêtant à chaque étage au début.",
-   "Je n’ai pas de salle aujourd’hui": "Marche rapide de 45 min avec côtes ou escaliers, puis 3 tours de 12 pompes inclinées, 15 ponts fessiers, 12 rowings avec un sac à dos chargé, 40 s de planche.",
-   "J’ai craqué ce week-end": "Un week-end ne défait pas un mois. Pas de jeûne le lundi : tu reprends simplement ton plan au prochain repas. La balance montera 1 ou 2 jours à cause de l’eau et du sel, puis redescend.",
-   "Je peux boire de l’alcool ?": "Les calories de l’alcool comptent sans nourrir. Un verre le week-end, ça passe. Au-delà, ça ralentit la perte et le sommeil. Avant l’essayage, réduis au maximum."
-  },
+  "faq": [
+   {
+    "c": "Pour toi",
+    "q": "Et si je stagne avant l’essayage ?",
+    "k": "stagne essayage bloque avril plateau",
+    "a": "Regarde la moyenne sur 2 semaines. Si elle ne bouge pas : vérifie d’abord le sommeil et la pesée des aliments. Ensuite seulement, on ajoute 2 000 pas par jour ou 10 min de tapis incliné. On ne descend jamais sous 1 400 kcal."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Les escaliers me fatiguent",
+    "k": "escaliers souffle essoufflee monter marches",
+    "a": "C’est exactement le rôle de la séance du mardi. En 3 à 4 semaines, tu sentiras la différence. Prends aussi les escaliers dès que tu peux, à ton rythme, même en t’arrêtant à chaque étage au début."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je vais avoir de grosses cuisses ?",
+    "k": "grosses cuisses volume jambes muscle bas corps",
+    "a": "Non. Tes séances jambes utilisent des charges modérées et des répétitions hautes : elles gardent le tonus sans développer de volume. Et en déficit calorique, on ne prend pas de masse musculaire importante. Tes jambes vont s’affiner."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je n’ai pas de salle aujourd’hui",
+    "k": "salle maison domicile pas salle fermee chez moi",
+    "a": "Marche rapide de 45 min avec côtes ou escaliers, puis 3 tours de 12 pompes inclinées, 15 ponts fessiers, 12 rowings avec un sac à dos chargé, 40 s de planche."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Pourquoi j’ai repris en mangeant 1 500 kcal ?",
+    "k": "repris 1500 mange peu pourquoi reprise",
+    "a": "Souvent, les calories réelles sont plus hautes que prévu : huile, sauces, boissons, grignotages, week-ends. Le manque de sommeil augmente aussi la faim. Pèse tes aliments 4 semaines, vise 7 h 30 de sommeil et 10 000 pas : c’est là que se trouve la différence."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Quand vais-je retrouver 68 kg ?",
+    "k": "68 kilos record quand retrouver ancien",
+    "a": "Au rythme prévu, vers fin janvier. Regarde la courbe de l’onglet Suivi : la ligne orange en pointillés marque les 68 kg."
+   },
+   {
+    "c": "Pour toi",
+    "q": "La dernière semaine avant l’essayage",
+    "k": "semaine avant essayage veille derniere jours",
+    "a": "On ne change rien : mêmes repas, mêmes séances, bon sommeil. Pas de régime sec, pas de restriction d’eau, pas de diurétiques. La veille, mange normalement et peu salé. La robe doit être ajustée à ton vrai corps, celui que tu auras au mariage."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Après l’essayage, je fais quoi ?",
+    "k": "apres essayage avril stabiliser maintien",
+    "a": "Phase Stabilisation : on remonte de 100 à 150 kcal et on garde les séances. Objectif : un poids stable à 1 kg près jusqu’au 5 mai, pour que les retouches restent légères."
+   },
+   {
+    "c": "Pour toi",
+    "q": "La semaine du mariage",
+    "k": "semaine mariage jour j 5 mai",
+    "a": "Séances légères (mode « Fatiguée »), beaucoup d’eau, repas habituels et peu salés les 2 derniers jours, et du sommeil. Le jour J, un vrai petit-déjeuner avec protéines : tu vas tenir debout longtemps !"
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je dors peu en ce moment, ça change quoi ?",
+    "k": "dors peu sommeil 8h fatigue moins dormir",
+    "a": "Beaucoup : moins de 7 h de sommeil augmente la faim et les envies de sucre, et ralentit la perte. Couche-toi 30 minutes plus tôt cette semaine, sans écran. C’est une règle du programme, pas un bonus."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je peux faire plus de tapis incliné ?",
+    "k": "plus tapis incline cardio ajouter",
+    "a": "Oui, jusqu’à 10 minutes de plus par séance, ou une marche inclinée de 30 minutes un jour de repos. Au-delà, garde plutôt l’énergie pour tes pas quotidiens."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Mes bras dans une robe sans manches",
+    "k": "bras robe manches triceps affiner",
+    "a": "Le superset triceps + curl du samedi tonifie l’arrière du bras, et les élévations latérales dessinent les épaules. Avec la perte de gras, les bras s’affinent. Le face pull améliore aussi la posture : épaules ouvertes, port de tête droit."
+   }
+  ],
   "profil": "Profil : 3 ans de pratique, aime le cardio sur tapis incliné, a un peu de mal dans les escaliers (souffle). Marche ~5 000 pas/jour, dort moins de 8 h en ce moment, essaie de manger 1 500 kcal mais a repris du poids (ancien 90 kg, descendue à 68 kg). Aime sa morphologie, ne veut pas développer le bas du corps. Essayage de robe de mariée début avril 2027, mariage le 5 mai 2027 : retouches légères possibles, pas de grosses. Priorité : revenir au moins à 68 kg."
  }
 };</script>

@@ -73,6 +73,15 @@
     <button class="later" type="button" id="lockLater">Plus tard, juste consulter</button>
   </form>
 </div>
+<div class="sheet" id="guide" role="dialog" aria-modal="true" aria-label="Comment faire l’exercice"><div class="card" id="guideIn"></div></div>
+<div class="sheet" id="lib" role="dialog" aria-modal="true" aria-label="Toutes les questions"><div class="card">
+  <button class="close" data-sheetclose="1" aria-label="Fermer">✕</button>
+  <div class="eyebrow">Ton coach</div><h2>Toutes les réponses</h2>
+  <label for="libQ" style="position:absolute;left:-9999px">Rechercher une question</label>
+  <input id="libQ" class="lib-search" placeholder="Rechercher : faim, genou, alcool, balance…" autocomplete="off">
+  <div class="lib-cats" id="libCats"></div>
+  <div class="lib-list" id="libList"></div>
+</div></div>
 
 <script>const P = {
  "aya": {
@@ -755,13 +764,68 @@
     "Whey (facultatif)"
    ]
   },
-  "faq": {
-   "Pourquoi je ne perds pas que du ventre ?": "Personne ne peut cibler la perte de graisse sur une zone. Le ventre, les bras et le dos s’affinent avec la perte globale. Ce qu’on peut cibler, c’est le muscle : c’est pour ça que tu as deux séances bas du corps. Mesure ton tour de taille chaque semaine, c’est souvent lui qui bouge avant la balance.",
-   "Je n’ai pas de salle aujourd’hui": "Séance maison 30 min : 4 tours de 15 ponts fessiers, 12 squats sumo, 10 fentes arrière par jambe, 10 pompes sur les genoux, 30 s de planche. 60 s de repos entre les tours, puis 30 min de marche rapide dehors.",
-   "J’ai faim le soir": "Ajoute du volume sans calories : une grosse soupe de légumes ou une salade avant le dîner. Garde ta collation protéinée entre 16h et 17h. Et vérifie ton eau : la soif ressemble souvent à la faim.",
-   "J’ai craqué ce week-end": "Un week-end ne défait pas un mois. Pas de compensation, pas de jeûne : tu reprends ton plan dès le prochain repas. La balance montera peut-être 2 jours (eau et sel), puis elle redescend.",
-   "La balance ne bouge pas": "Regarde la moyenne sur 2 semaines, pas un jour. Avec la prise de muscle en bas, le poids peut stagner pendant que la taille diminue. Si rien ne bouge en 3 semaines (poids et tour de taille), on retire 100 kcal."
-  },
+  "faq": [
+   {
+    "c": "Pour toi",
+    "q": "Pourquoi je ne perds pas que du ventre ?",
+    "k": "ventre perdre cibler localement bras dos zone",
+    "a": "Personne ne peut cibler la perte de graisse sur une zone. Le ventre, les bras et le dos s’affinent avec la perte globale. Ce qu’on peut cibler, c’est le muscle : c’est pour ça que tu as deux séances bas du corps. Mesure ton tour de taille chaque semaine, c’est souvent lui qui bouge avant la balance."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Comment prendre des fessiers sans grossir des cuisses ?",
+    "k": "fessiers cuisses grossir prendre volume bas corps",
+    "a": "Ton programme met l’accent sur les exercices où le fessier travaille le plus : hip thrust, fentes avec le buste penché, kickback, abduction, presse avec les pieds hauts. En déficit calorique, tes cuisses vont s’affiner pendant que tes fessiers prennent de la forme."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Comment affiner mes bras et mon dos ?",
+    "k": "affiner bras dos epaules haut corps gros",
+    "a": "Par la perte de gras globale, et en gardant le muscle avec la séance du mardi. Ton haut du corps est déjà fort : on l’entretient sans chercher à le développer. Les élévations latérales et le tirage dessinent une taille plus fine visuellement."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je n’ai pas de salle aujourd’hui",
+    "k": "salle maison domicile pas salle fermee chez moi",
+    "a": "Séance maison de 30 min : 4 tours de 15 ponts fessiers, 12 squats sumo, 10 fentes arrière par jambe, 10 pompes sur les genoux, 30 s de planche. 60 s de repos entre les tours, puis 30 min de marche rapide dehors."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je débute : c’est normal de trembler ?",
+    "k": "trembler debutante normal tremble muscles",
+    "a": "Oui, c’est très normal au début : ton système nerveux apprend à coordonner les muscles. Ça disparaît en 2 à 4 semaines. Garde des charges légères pendant la phase Fondations."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je n’ai jamais fait de musculation, par où commencer ?",
+    "k": "jamais fait debut commencer premiere fois musculation debutante",
+    "a": "Commence par la phase Fondations : charges légères, 3 répétitions en réserve, et ouvre la fiche « Comment faire » de chaque exercice avant de le tenter. Le mode séance te guide série par série. Les 2 premières semaines, l’objectif est seulement d’apprendre les gestes."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Je prends du poids alors que je fais tout bien",
+    "k": "prends poids grossi monte muscle tout bien",
+    "a": "En début de musculation, les muscles stockent plus d’eau et de glycogène : 0,5 à 1 kg de plus sur la balance, c’est fréquent. Regarde ton tour de taille et tes photos. Si la tendance sur 3 semaines ne baisse pas, on ajustera."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Pourquoi 4 séances et pas plus ?",
+    "k": "pourquoi 4 seances plus 5 6 tous les jours",
+    "a": "C’est le bon équilibre pour une débutante : assez pour progresser, assez de repos pour que les muscles se construisent. Les autres jours, tu marches. Tu pourras passer à 5 séances après 3 mois si tu en as envie."
+   },
+   {
+    "c": "Pour toi",
+    "q": "J’ai peur de reprendre mes kilos",
+    "k": "peur reprendre kilos rechute yoyo maintenir",
+    "a": "Tu as déjà prouvé que tu sais perdre 30 kg. Ce qui protège de la reprise, c’est exactement ce qu’on construit : du muscle, une alimentation que tu peux tenir toute ta vie, et des habitudes. À 61 kg, on remontera les calories progressivement pour stabiliser."
+   },
+   {
+    "c": "Pour toi",
+    "q": "Et quand j’aurai atteint 61 kg ?",
+    "k": "apres objectif atteint 61 maintien stabiliser",
+    "a": "On passe en maintien : +100 à 150 kcal par semaine jusqu’à stabiliser le poids, en gardant les 4 séances. C’est souvent à ce moment que les fessiers prennent le plus de forme."
+   }
+  ],
   "profil": "Profil : débutante, ancien poids max 108 kg (déjà −30 kg), plus bas 70 kg. Veut perdre du gras en général (ventre, bras, dos) et prendre un peu de muscle aux fessiers et cuisses ; haut du corps déjà fort. Marche au quotidien, disponible tous les jours, dort 8 h, mange équilibré 2 à 3 repas. Très motivée."
  }
 };</script>

@@ -139,7 +139,7 @@ button{cursor:pointer}
 @media (max-width:620px){ .sess-h{grid-template-columns:auto 1fr} .sess-act{grid-column:1/-1} }
 .warm{padding:10px 18px; font-size:13px; color:var(--muted); background:var(--surface-2); border-bottom:1px solid var(--line)}
 .warm b{color:var(--ink)}
-.ex{display:grid; grid-template-columns:28px 1fr auto auto; gap:12px; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line)}
+.ex{display:grid; grid-template-columns:28px 1fr auto auto auto; gap:10px; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line)}
 .ex:last-child{border-bottom:0}
 .ex .i{font-family:var(--f-display); font-weight:700; color:var(--muted); font-size:13px}
 .ex .n{font-weight:700}
@@ -149,7 +149,40 @@ button{cursor:pointer}
 .ex.cardio .rx{white-space:normal; max-width:190px; font-size:14px}
 .alt{border:1px solid var(--line); background:var(--surface); width:32px; height:32px; border-radius:10px; color:var(--muted); font-size:15px}
 .alt:hover{color:var(--acc); border-color:var(--acc)}
-@media (max-width:620px){ .ex{grid-template-columns:22px 1fr auto} .ex .rx{grid-column:2; text-align:left} .ex .alt{grid-row:1; grid-column:3} }
+@media (max-width:620px){ .ex{grid-template-columns:22px 1fr auto auto} .ex .rx{grid-column:2 / -1; text-align:left} .ex .alt{grid-row:1} }
+.alt.how{font-family:var(--f-display); font-weight:800; color:var(--acc); border-color:color-mix(in srgb, var(--acc) 35%, var(--line))}
+.howlink{border:0; background:none; color:var(--acc); font-weight:700; text-decoration:underline; margin-top:8px; font-size:14px}
+/* fiche exercice + bibliothèque */
+.sheet{position:fixed; inset:0; z-index:85; display:none; align-items:center; justify-content:center; padding:16px; background:color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter:blur(8px)}
+.sheet.open{display:flex}
+.sheet .card{width:min(640px,100%); max-height:88vh; overflow:auto; padding:24px; position:relative}
+.sheet .close{position:absolute; right:14px; top:14px; border:0; background:var(--surface-2); border-radius:10px; width:36px; height:36px}
+.sheet h2{font-size:24px; margin:6px 40px 8px 0}
+.sheet h3{font-size:17px; margin:22px 0 6px; padding-top:14px; border-top:1px solid var(--line)}
+.sheet h3:first-of-type{border-top:0; padding-top:0}
+.g-sec{margin-top:12px}
+.g-sec b.lab{display:block; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--acc); margin-bottom:4px}
+.g-sec p{margin:0; font-size:14.5px}
+.g-sec ol, .g-sec ul{margin:0; padding-left:20px; font-size:14.5px; display:grid; gap:4px}
+.g-two{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+@media (max-width:520px){ .g-two{grid-template-columns:1fr} }
+.g-two div{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px}
+.g-two b{display:block; font-size:12px; color:var(--muted); margin-bottom:2px}
+.g-alt{background:var(--acc-soft) !important; border-color:var(--acc) !important}
+.g-act{display:flex; gap:8px; flex-wrap:wrap; margin-top:18px}
+.g-act a{text-decoration:none}
+.lib-search{width:100%; border:1px solid var(--line); background:var(--surface-2); border-radius:12px; padding:11px 13px; margin:6px 0 10px}
+.lib-cats{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.lib-cats button{border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:5px 12px; font-weight:600; font-size:13px}
+.lib-cats button[aria-pressed="true"]{background:var(--acc); color:#fff; border-color:var(--acc)}
+.lib-list{display:grid; gap:6px}
+.lib-list details{border:1px solid var(--line); border-radius:12px; background:var(--surface)}
+.lib-list summary{cursor:pointer; padding:11px 14px; font-weight:700; font-size:14.5px; list-style:none; display:flex; justify-content:space-between; gap:10px}
+.lib-list summary::after{content:"+"; color:var(--acc); font-weight:800}
+.lib-list details[open] summary::after{content:"−"}
+.lib-list details p{margin:0; padding:0 14px 12px; font-size:14px; color:var(--ink)}
+.lib-list .cat{font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin:10px 2px 0}
+.sugg .more{background:var(--ink); color:var(--bg); border-color:var(--ink)}
 
 /* nutrition */
 .nut-top{display:grid; grid-template-columns:260px 1fr; gap:14px}
@@ -334,6 +367,15 @@ footer{grid-column:1/-1; color:var(--muted); font-size:12.5px; text-align:center
   <div class="card pl" id="pl"></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="sheet" id="guide" role="dialog" aria-modal="true" aria-label="Comment faire l’exercice"><div class="card" id="guideIn"></div></div>
+<div class="sheet" id="lib" role="dialog" aria-modal="true" aria-label="Toutes les questions"><div class="card">
+  <button class="close" data-sheetclose="1" aria-label="Fermer">✕</button>
+  <div class="eyebrow">Ton coach</div><h2>Toutes les réponses</h2>
+  <label for="libQ" style="position:absolute;left:-9999px">Rechercher une question</label>
+  <input id="libQ" class="lib-search" placeholder="Rechercher : faim, genou, alcool, balance…" autocomplete="off">
+  <div class="lib-cats" id="libCats"></div>
+  <div class="lib-list" id="libList"></div>
+</div></div>
 
 <script>
 /* ===================== DONNÉES ===================== */
@@ -685,7 +727,8 @@ function renderProg(){
             <div class="i">${String(ei+1).padStart(2,"0")}</div>
             <div><div class="n">${esc(e.n)}</div><div class="c">${esc(e.c)}</div></div>
             <div class="rx num">${esc(r.txt)}${r.rest?`<small>repos ${r.rest} s</small>`:""}</div>
-            <button class="alt" data-alt="${si}-${ei}" title="Demander une alternative au coach" aria-label="Alternative à ${esc(e.n)}">↻</button>
+            ${GUIDE_OF[e.n] ? `<button class="alt how" data-guide="${si}-${ei}" title="Comment faire cet exercice" aria-label="Comment faire : ${esc(e.n)}">?</button>` : "<span></span>"}
+            <button class="alt" data-alt="${si}-${ei}" title="Remplacer cet exercice" aria-label="Alternative à ${esc(e.n)}">↻</button>
           </div>`;}).join("")}
       </article>`).join("")}
     </div>`;
@@ -857,8 +900,16 @@ document.addEventListener("click", e=>{
   else if (t.dataset.en){ energy = +t.dataset.en; renderProg(); }
   else if (t.dataset.done){ toggleDone(+t.dataset.done); }
   else if (t.dataset.play){ openPlayer(+t.dataset.play); }
+  else if (t.dataset.guide){ const [si,ei] = t.dataset.guide.split("-").map(Number); openGuide(P[who].sessions[si].ex[ei]); }
+  else if (t.dataset.guidename){ const ex = P[who].sessions.flatMap(s=>s.ex).find(x=>x.n===t.dataset.guidename); if (ex) openGuide(ex); }
   else if (t.dataset.alt){ const [si,ei] = t.dataset.alt.split("-").map(Number); const ex = P[who].sessions[si].ex[ei];
-    ask(`Propose-moi 2 alternatives à « ${ex.n} » (séance ${P[who].sessions[si].title}) qui travaillent les mêmes muscles, avec séries et répétitions.`); }
+    if (liveCoach()) ask(`Propose-moi 2 alternatives à « ${ex.n} » (séance ${P[who].sessions[si].title}) qui travaillent les mêmes muscles, avec séries et répétitions.`);
+    else if (GUIDE_OF[ex.n]) openGuide(ex, true);
+    else ask("Une machine est prise, je fais quoi ?"); }
+  else if (t.dataset.sheetclose){ t.closest(".sheet").classList.remove("open"); }
+  else if (t.dataset.libcat !== undefined){ libCat = t.dataset.libcat; renderLib(); }
+  else if (t.id === "openLib"){ openLib(); }
+  else if (t.dataset.askg){ $("#guide").classList.remove("open"); ask(t.dataset.askg); }
   else if (t.dataset.swap){ const i = +t.dataset.swap; mealSel[who][i] = (mealSel[who][i]+1) % P[who].meals[i].opts.length; renderNut(); }
   else if (t.id === "copyShop"){ const txt = Object.entries(P[who].shop).map(([g,l])=>g+"\n"+l.map(x=>"- "+x).join("\n")).join("\n\n");
     navigator.clipboard.writeText(txt).then(()=>toast("Liste copiée"), ()=>toast("Copie impossible ici, sélectionne la liste à la main")); }
@@ -904,6 +955,7 @@ function drawPlayer(){
     <div class="step">${esc(s.title)} · exercice ${PL.ei+1} / ${s.ex.length}</div>
     <h2>${esc(e.n)}</h2><div class="rx num">${esc(r.txt)}</div>
     <p class="cue">${esc(e.c)}</p>
+    ${GUIDE_OF[e.n] ? `<button class="howlink" data-guidename="${esc(e.n)}">Comment faire cet exercice ?</button>` : ""}
     ${e.cardio ? "" : `<div class="timer"><svg viewBox="0 0 190 190"><circle cx="95" cy="95" r="84" fill="none" stroke="var(--line)" stroke-width="10"/><circle id="arc" cx="95" cy="95" r="84" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-prog)}"/></svg>
       <div class="t"><div>${resting ? `<span id="tl" class="num">${PL.left}</span><small>repos</small>` : `<span class="num">${PL.set+1}</span><small>série en cours</small>`}</div></div></div>
       <div class="setdots">${Array.from({length:r.sets},(_,i)=>`<i class="${i<PL.set?'on':''}"></i>`).join("")}</div>`}

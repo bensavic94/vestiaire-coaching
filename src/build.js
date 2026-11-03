@@ -1,8 +1,10 @@
 const fs = require('fs');
 const src = fs.readFileSync(__dirname + '/template.html','utf8');
-const coach = fs.readFileSync(__dirname + '/coach.js','utf8'), save = fs.readFileSync(__dirname + '/save.js','utf8');
+const coach = fs.readFileSync(__dirname + '/guides.js','utf8') + '\n' + fs.readFileSync(__dirname + '/coach.js','utf8'), save = fs.readFileSync(__dirname + '/save.js','utf8');
 const pStart = src.indexOf('const P = {'), pEnd = src.indexOf('\nconst ORDER');
 const P = Function(src.slice(pStart, pEnd) + '\nreturn P;')();
+const PERSO = require(__dirname + '/faq-perso.js');
+for (const k of ['aya','camelia']) P[k].faq = PERSO[k];
 // Aya : valeurs du questionnaire
 P.aya.w0 = 76; P.aya.goal = 61;
 P.aya.note.p = P.aya.note.p.replace('62 kg','61 kg');

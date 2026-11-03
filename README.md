@@ -9,6 +9,12 @@ Deux pages autonomes, une par athlète, avec programme sport, nutrition, suivi d
 | `src/` | — | modèle commun et script de génération |
 | `supabase/` | — | base de données (migration) et fonction `coach` |
 
+## Contenus
+
+- `src/guides.js` : fiches « Comment faire » de chaque exercice (`GUIDES`), correspondance exercice → fiche (`GUIDE_OF`) et questions/réponses communes (`FAQ_COMMON`).
+- `src/faq-perso.js` : questions/réponses propres à chaque athlète (affichées en premier).
+- Le coach répond hors ligne grâce à ces réponses (recherche par mots-clés), enregistre les pesées (« je fais 74,8 ») et les séances (« j’ai fait la séance 2 »).
+
 ## Modifier le programme
 
 1. Modifier les données dans `src/template.html` (objet `const P = {...}`).

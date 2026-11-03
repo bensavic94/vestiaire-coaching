@@ -181,7 +181,8 @@ function renderProg(){
             <div class="i">${String(ei+1).padStart(2,"0")}</div>
             <div><div class="n">${esc(e.n)}</div><div class="c">${esc(e.c)}</div></div>
             <div class="rx num">${esc(r.txt)}${r.rest?`<small>repos ${r.rest} s</small>`:""}</div>
-            <button class="alt" data-alt="${si}-${ei}" title="Demander une alternative au coach" aria-label="Alternative à ${esc(e.n)}">↻</button>
+            ${GUIDE_OF[e.n] ? `<button class="alt how" data-guide="${si}-${ei}" title="Comment faire cet exercice" aria-label="Comment faire : ${esc(e.n)}">?</button>` : "<span></span>"}
+            <button class="alt" data-alt="${si}-${ei}" title="Remplacer cet exercice" aria-label="Alternative à ${esc(e.n)}">↻</button>
           </div>`;}).join("")}
       </article>`).join("")}
     </div>`;
@@ -352,8 +353,16 @@ document.addEventListener("click", e=>{
   else if (t.dataset.en){ energy = +t.dataset.en; renderProg(); }
   else if (t.dataset.done){ toggleDone(+t.dataset.done); }
   else if (t.dataset.play){ openPlayer(+t.dataset.play); }
+  else if (t.dataset.guide){ const [si,ei] = t.dataset.guide.split("-").map(Number); openGuide(P[who].sessions[si].ex[ei]); }
+  else if (t.dataset.guidename){ const ex = P[who].sessions.flatMap(s=>s.ex).find(x=>x.n===t.dataset.guidename); if (ex) openGuide(ex); }
   else if (t.dataset.alt){ const [si,ei] = t.dataset.alt.split("-").map(Number); const ex = P[who].sessions[si].ex[ei];
-    ask(`Propose-moi 2 alternatives à « ${ex.n} » (séance ${P[who].sessions[si].title}) qui travaillent les mêmes muscles, avec séries et répétitions.`); }
+    if (liveCoach()) ask(`Propose-moi 2 alternatives à « ${ex.n} » (séance ${P[who].sessions[si].title}) qui travaillent les mêmes muscles, avec séries et répétitions.`);
+    else if (GUIDE_OF[ex.n]) openGuide(ex, true);
+    else ask("Une machine est prise, je fais quoi ?"); }
+  else if (t.dataset.sheetclose){ t.closest(".sheet").classList.remove("open"); }
+  else if (t.dataset.libcat !== undefined){ libCat = t.dataset.libcat; renderLib(); }
+  else if (t.id === "openLib"){ openLib(); }
+  else if (t.dataset.askg){ $("#guide").classList.remove("open"); ask(t.dataset.askg); }
   else if (t.dataset.swap){ const i = +t.dataset.swap; mealSel[who][i] = (mealSel[who][i]+1) % P[who].meals[i].opts.length; renderNut(); }
   else if (t.id === "copyShop"){ const txt = Object.entries(P[who].shop).map(([g,l])=>g+"\n"+l.map(x=>"- "+x).join("\n")).join("\n\n");
     navigator.clipboard.writeText(txt).then(()=>toast("Liste copiée"), ()=>toast("Copie impossible ici, sélectionne la liste à la main")); }
@@ -392,6 +401,7 @@ function drawPlayer(){
     <div class="step">${esc(s.title)} · exercice ${PL.ei+1} / ${s.ex.length}</div>
     <h2>${esc(e.n)}</h2><div class="rx num">${esc(r.txt)}</div>
     <p class="cue">${esc(e.c)}</p>
+    ${GUIDE_OF[e.n] ? `<button class="howlink" data-guidename="${esc(e.n)}">Comment faire cet exercice ?</button>` : ""}
     ${e.cardio ? "" : `<div class="timer"><svg viewBox="0 0 190 190"><circle cx="95" cy="95" r="84" fill="none" stroke="var(--line)" stroke-width="10"/><circle id="arc" cx="95" cy="95" r="84" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-prog)}"/></svg>
       <div class="t"><div>${resting ? `<span id="tl" class="num">${PL.left}</span><small>repos</small>` : `<span class="num">${PL.set+1}</span><small>série en cours</small>`}</div></div></div>
       <div class="setdots">${Array.from({length:r.sets},(_,i)=>`<i class="${i<PL.set?'on':''}"></i>`).join("")}</div>`}
@@ -424,18 +434,457 @@ document.getElementById("player").addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{ if (e.key === "Escape" && PL) closePlayer(); });
 
+/* ===================== FICHES EXERCICES ===================== */
+/* n : nom · m : muscles · set : installation · st : étapes · b : respiration · err : erreurs · easy / hard : variantes · alt : remplacements · yt : recherche vidéo */
+const GUIDES = {
+  hipthrust:{n:"Hip thrust", m:["Fessiers","Ischios"],
+    set:"Assieds-toi par terre, le haut du dos (sous les omoplates) contre un banc. Barre ou haltère posé sur le pli de la hanche, avec une mousse pour le confort. Pieds à plat, écartés largeur de hanches.",
+    st:["Rentre le menton et regarde devant toi, pas le plafond.","Pousse dans les talons pour monter les hanches jusqu’à ce que le buste soit parallèle au sol.","En haut, serre fort les fessiers 1 seconde : genoux à 90°, tibias verticaux.","Redescends lentement sans poser les fesses au sol, puis remonte."],
+    b:"Inspire en bas, souffle en montant.",
+    err:["Cambrer le bas du dos en haut au lieu de serrer les fessiers.","Pieds trop loin (ça travaille les ischios) ou trop près (les cuisses).","Pousser sur la pointe des pieds."],
+    easy:"Pont fessier au sol, sans charge.", hard:"Pause de 3 secondes en haut, ou version une jambe.",
+    alt:["Machine hip thrust","Pont fessier au sol lesté"], yt:"hip thrust technique débutante"},
+  gobletsquat:{n:"Squat gobelet", m:["Cuisses","Fessiers","Gainage"],
+    set:"Tiens un haltère ou un kettlebell verticalement contre ta poitrine, coudes vers le bas. Pieds un peu plus larges que les hanches, pointes légèrement ouvertes.",
+    st:["Gaine le ventre comme si on allait te pousser.","Descends en envoyant les hanches entre tes talons, buste fier.","Va aussi bas que possible en gardant le dos droit et les talons au sol.","Remonte en poussant le sol avec tout le pied."],
+    b:"Inspire en descendant, souffle en remontant.",
+    err:["Genoux qui rentrent vers l’intérieur : pousse-les dans l’axe des pieds.","Talons qui décollent.","Dos qui s’arrondit en bas."],
+    easy:"Squat sur une chaise : tu t’assois, tu te relèves.", hard:"Descente en 3 secondes et pause en bas.",
+    alt:["Presse à cuisses","Squat à la Smith machine"], yt:"goblet squat technique"},
+  fentearriere:{n:"Fente arrière", m:["Fessiers","Cuisses"],
+    set:"Debout, pieds largeur de hanches, un haltère dans chaque main (ou sans charge), bras le long du corps.",
+    st:["Fais un grand pas en arrière avec une jambe.","Descends jusqu’à ce que le genou arrière frôle le sol.","Garde le buste légèrement penché en avant : le fessier de la jambe avant travaille plus.","Pousse dans le talon avant pour revenir debout. Fais toutes les répétitions d’un côté, puis change."],
+    b:"Inspire en descendant, souffle en remontant.",
+    err:["Pas trop court : le genou avant part loin devant.","Genou avant qui rentre vers l’intérieur.","Se relever en poussant avec la jambe arrière."],
+    easy:"Sans charge, en te tenant à un mur.", hard:"Pied avant surélevé sur un step de 10 cm.",
+    alt:["Step-up","Fente bulgare (pied arrière sur un banc)"], yt:"fente arrière haltères technique"},
+  abduction:{n:"Abduction à la machine", m:["Moyen fessier (haut des fesses)"],
+    set:"Règle les coussins pour qu’ils soient à l’extérieur des genoux. Choisis une charge que tu contrôles sur 15 répétitions.",
+    st:["Penche légèrement le buste en avant et tiens les poignées.","Écarte les jambes le plus loin possible.","Marque une pause d’une seconde.","Reviens lentement en 2 secondes sans laisser les plaques se toucher."],
+    b:"Souffle en écartant, inspire en revenant.",
+    err:["Utiliser l’élan.","Charge trop lourde avec une amplitude réduite."],
+    easy:"Moins de charge, amplitude complète.", hard:"Termine avec 10 répétitions partielles en position écartée.",
+    alt:["Pas latéraux avec élastique","Abduction allongée sur le côté"], yt:"abduction machine fessiers technique"},
+  kickback:{n:"Kickback à la poulie", m:["Grand fessier"],
+    set:"Poulie en position basse, sangle autour de la cheville. Face à la machine, mains sur la machine, buste légèrement penché.",
+    st:["Garde le bassin immobile et le ventre gainé.","Pousse la jambe en arrière et légèrement en diagonale, genou presque tendu.","Serre le fessier en fin de mouvement, une seconde.","Reviens lentement sans poser le pied."],
+    b:"Souffle en poussant la jambe, inspire au retour.",
+    err:["Cambrer le dos pour monter plus haut.","Faire tourner le bassin."],
+    easy:"Version à quatre pattes au sol, sans charge.", hard:"Pause de 2 secondes en haut.",
+    alt:["Kickback avec élastique","Donkey kick au sol"], yt:"cable kickback fessiers technique"},
+  marche:{n:"Marche inclinée sur tapis", m:["Fessiers","Mollets","Cardio"],
+    set:"Règle la pente puis la vitesse indiquées. Chaussures de sport, bouteille d’eau à portée.",
+    st:["Lâche les barres : tenir les barres réduit fortement l’effort.","Fais des pas naturels, buste droit, bras qui balancent.","Garde un rythme où tu peux parler en phrases courtes.","Les 2 dernières minutes, baisse la pente pour récupérer."],
+    b:"Respire régulièrement, par le nez si possible.",
+    err:["Se tenir aux barres.","Se pencher fortement en avant."],
+    easy:"Pente plus faible (5-6 %).", hard:"Augmente la pente de 1 à 2 % chaque semaine.",
+    alt:["Vélo","Elliptique","Marche en côte dehors"], yt:"marche inclinée tapis technique"},
+  tirage:{n:"Tirage vertical", m:["Dos (grand dorsal)","Biceps"],
+    set:"Assieds-toi, cuisses bloquées sous les coussins. Prise large (ou serrée selon la séance), paumes vers l’avant.",
+    st:["Penche légèrement le buste en arrière, poitrine sortie.","Tire la barre vers le haut de ta poitrine en pensant « coudes dans les poches ».","Serre les omoplates en bas, une seconde.","Remonte lentement jusqu’à bras tendus."],
+    b:"Souffle en tirant, inspire en remontant.",
+    err:["Tirer derrière la nuque.","Se balancer en arrière pour aider.","Tirer avec les bras seulement, épaules qui montent aux oreilles."],
+    easy:"Tirage avec élastique fixé en hauteur.", hard:"Descente en 3 secondes.",
+    alt:["Tractions assistées","Tirage avec élastique"], yt:"tirage vertical poulie haute technique"},
+  rowinghaltere:{n:"Rowing haltère un bras", m:["Dos","Arrière d’épaule","Biceps"],
+    set:"Un genou et une main sur un banc, l’autre pied au sol. Dos plat, haltère dans la main libre, bras tendu.",
+    st:["Gaine le ventre, dos bien plat comme une table.","Tire le coude vers la hanche, pas vers l’épaule.","Serre l’omoplate en haut une seconde.","Redescends lentement jusqu’à bras tendu. Fais toutes les répétitions, puis change de côté."],
+    b:"Souffle en tirant, inspire en descendant.",
+    err:["Tourner le buste pour monter l’haltère.","Dos arrondi."],
+    easy:"Haltère plus léger, mouvement plus lent.", hard:"Pause de 2 secondes en haut.",
+    alt:["Rowing poulie basse","Rowing machine"], yt:"rowing haltère un bras technique"},
+  devincline:{n:"Développé incliné haltères", m:["Haut des pectoraux","Épaules","Triceps"],
+    set:"Banc incliné à 30°. Haltères posés sur les cuisses, puis amène-les à hauteur de poitrine en t’allongeant.",
+    st:["Serre les omoplates et plante les pieds au sol.","Pousse les haltères vers le haut, ils se rapprochent sans se toucher.","Redescends lentement jusqu’à ce que les coudes soient un peu sous le banc.","Les coudes restent à environ 45° du corps, pas à l’horizontale."],
+    b:"Inspire en descendant, souffle en poussant.",
+    err:["Coudes trop écartés (épaules en danger).","Décoller les fesses du banc."],
+    easy:"Pompes contre un banc.", hard:"Descente en 3 secondes.",
+    alt:["Développé à la machine","Pompes inclinées"], yt:"développé incliné haltères technique"},
+  devcouche:{n:"Développé couché haltères", m:["Pectoraux","Épaules","Triceps"],
+    set:"Allongée sur un banc plat, haltères à hauteur de poitrine, pieds bien au sol.",
+    st:["Serre les omoplates comme pour les mettre dans tes poches arrière.","Pousse les haltères vers le haut sans les cogner.","Redescends lentement en 2 secondes.","Coudes à environ 45° du corps."],
+    b:"Inspire en descendant, souffle en poussant.",
+    err:["Coudes à l’horizontale.","Rebondir en bas."],
+    easy:"Développé à la machine.", hard:"Pause d’une seconde en bas.",
+    alt:["Machine développé","Pompes"], yt:"développé couché haltères technique"},
+  elevlat:{n:"Élévations latérales", m:["Épaules (deltoïde latéral)"],
+    set:"Debout, un haltère léger dans chaque main, bras le long du corps, coudes très légèrement fléchis.",
+    st:["Penche très légèrement le buste en avant.","Monte les bras sur les côtés jusqu’à hauteur d’épaules, pas plus haut.","Imagine que tu verses une carafe : les petits doigts légèrement vers le haut.","Redescends en 2 secondes."],
+    b:"Souffle en montant, inspire en descendant.",
+    err:["Prendre trop lourd et donner de l’élan.","Hausser les épaules vers les oreilles."],
+    easy:"Un bras à la fois, en te tenant à un support.", hard:"Pause d’une seconde en haut.",
+    alt:["Élévations à la poulie","Machine élévations latérales"], yt:"élévations latérales haltères technique"},
+  curl:{n:"Curl biceps", m:["Biceps"],
+    set:"Debout, haltères ou poulie basse avec barre, coudes collés au corps.",
+    st:["Monte la charge en pliant les coudes, sans bouger le haut du bras.","Serre le biceps en haut.","Redescends lentement jusqu’à bras presque tendus."],
+    b:"Souffle en montant, inspire en descendant.",
+    err:["Balancer le buste.","Coudes qui avancent."],
+    easy:"Charge plus légère, assise.", hard:"Descente en 3 secondes.",
+    alt:["Curl élastique","Curl marteau"], yt:"curl biceps haltères technique"},
+  triceps:{n:"Extension triceps à la poulie", m:["Triceps (arrière du bras)"],
+    set:"Poulie haute avec corde ou barre. Debout face à la machine, coudes collés au corps.",
+    st:["Garde les coudes fixes contre les côtes.","Pousse vers le bas jusqu’à bras tendus, écarte la corde en bas.","Remonte lentement jusqu’à ce que les avant-bras soient à l’horizontale."],
+    b:"Souffle en poussant, inspire en remontant.",
+    err:["Coudes qui s’écartent ou remontent.","Pencher le buste pour pousser avec le poids du corps."],
+    easy:"Charge légère, mouvement lent.", hard:"Pause d’une seconde bras tendus.",
+    alt:["Dips sur un banc","Extension haltère au-dessus de la tête"], yt:"extension triceps poulie corde technique"},
+  planche:{n:"Planche (gainage)", m:["Abdominaux profonds","Gainage"],
+    set:"Sur les avant-bras, coudes sous les épaules, jambes tendues sur la pointe des pieds.",
+    st:["Aligne tête, épaules, bassin et talons.","Serre les fessiers et rentre le nombril.","Pousse le sol avec les avant-bras.","Tiens le temps indiqué en respirant."],
+    b:"Respire calmement, ne bloque pas ta respiration.",
+    err:["Fesses trop hautes.","Bas du dos qui creuse."],
+    easy:"Sur les genoux.", hard:"Lève un pied pendant 5 secondes, en alternant.",
+    alt:["Dead bug","Planche sur les mains"], yt:"planche gainage technique"},
+  deadbug:{n:"Dead bug", m:["Abdominaux profonds"],
+    set:"Allongée sur le dos, bras tendus vers le plafond, genoux pliés à 90° au-dessus des hanches.",
+    st:["Plaque le bas du dos au sol, c’est la règle n°1.","Tends lentement une jambe et le bras opposé vers le sol.","Reviens au centre et change de côté.","Une répétition = un côté."],
+    b:"Souffle à fond en tendant bras et jambe.",
+    err:["Le bas du dos se décolle du sol.","Aller trop vite."],
+    easy:"Bouge seulement les jambes.", hard:"Tiens un haltère léger dans les mains.",
+    alt:["Planche","Crunch inversé lent"], yt:"dead bug exercice technique"},
+  velo:{n:"Vélo ou elliptique (zone 2)", m:["Cardio","Jambes"],
+    set:"Règle la selle à hauteur de hanche (vélo). Résistance moyenne.",
+    st:["Échauffe-toi 3 minutes en douceur.","Trouve un rythme où tu peux parler mais pas chanter : c’est la zone 2.","Garde ce rythme jusqu’à la fin.","Termine par 2 minutes plus lentes."],
+    b:"Respiration régulière, un peu accélérée.",
+    err:["Aller trop fort : en zone 2 tu dois pouvoir parler."],
+    easy:"Résistance plus faible.", hard:"Ajoute 5 minutes.",
+    alt:["Marche inclinée","Rameur doux"], yt:"cardio zone 2 explication"},
+  rdl:{n:"Soulevé de terre roumain", m:["Ischios","Fessiers","Bas du dos"],
+    set:"Debout, haltères devant les cuisses, pieds largeur de hanches, genoux légèrement fléchis.",
+    st:["Pousse les hanches vers l’arrière comme pour fermer une porte avec les fesses.","Les haltères glissent le long des cuisses, puis des tibias.","Descends jusqu’à sentir un étirement à l’arrière des cuisses, dos toujours plat.","Remonte en poussant les hanches vers l’avant et en serrant les fessiers."],
+    b:"Inspire en descendant, souffle en remontant.",
+    err:["Arrondir le dos : c’est l’erreur à éviter absolument.","Plier les genoux comme un squat.","Écarter les haltères des jambes."],
+    easy:"Avec un bâton ou à vide pour apprendre le geste.", hard:"Version une jambe.",
+    alt:["Leg curl","Good morning avec élastique"], yt:"soulevé de terre roumain haltères technique"},
+  presse:{n:"Presse à cuisses", m:["Cuisses","Fessiers"],
+    set:"Dos bien plaqué au dossier. Pieds largeur d’épaules sur la plateforme (hauts et larges pour viser les fessiers).",
+    st:["Déverrouille la sécurité.","Descends en pliant les genoux jusqu’à environ 90°, sans décoller le bas du dos.","Pousse avec tout le pied, surtout les talons.","Ne verrouille pas complètement les genoux en haut."],
+    b:"Inspire en descendant, souffle en poussant.",
+    err:["Fesses qui décollent du siège en bas.","Genoux qui rentrent vers l’intérieur.","Bloquer les genoux tendus en haut."],
+    easy:"Moins de charge, amplitude réduite.", hard:"Descente en 3 secondes.",
+    alt:["Squat gobelet","Hack squat léger"], yt:"presse à cuisses technique fessiers"},
+  stepup:{n:"Step-up (montée sur banc ou marche)", m:["Fessiers","Cuisses","Équilibre"],
+    set:"Face à un banc ou une marche stable (30 à 45 cm). Haltères en main ou sans charge.",
+    st:["Pose tout le pied sur le banc.","Monte en poussant uniquement avec la jambe posée sur le banc, sans élan de l’autre jambe.","Tiens-toi droite en haut.","Redescends lentement. Fais toutes les répétitions d’un côté, puis change."],
+    b:"Souffle en montant, inspire en descendant.",
+    err:["Pousser avec le pied resté au sol.","Banc trop haut au début."],
+    easy:"Marche plus basse, sans charge.", hard:"Haltères plus lourds ou banc plus haut.",
+    alt:["Fente arrière","Fente marchée"], yt:"step up banc technique fessiers"},
+  legcurl:{n:"Leg curl", m:["Ischios (arrière des cuisses)"],
+    set:"Allongée ou assise selon la machine. Le coussin se place juste au-dessus des talons, genoux alignés avec l’axe de la machine.",
+    st:["Plie les genoux en ramenant les talons vers les fesses.","Serre une seconde.","Reviens en 3 secondes, lentement."],
+    b:"Souffle en pliant, inspire au retour.",
+    err:["Décoller les hanches.","Revenir trop vite."],
+    easy:"Moins de charge.", hard:"Version une jambe.",
+    alt:["Soulevé de terre roumain","Curl avec ballon de gym"], yt:"leg curl machine technique"},
+  pontuni:{n:"Pont fessier une jambe", m:["Fessiers"],
+    set:"Allongée sur le dos, un pied au sol près des fesses, l’autre jambe tendue ou pliée en l’air.",
+    st:["Pousse dans le talon au sol pour lever le bassin.","Garde le bassin bien horizontal, sans pencher d’un côté.","Serre le fessier une seconde en haut.","Redescends sans poser complètement."],
+    b:"Souffle en montant.",
+    err:["Bassin qui tourne.","Pousser avec la pointe du pied."],
+    easy:"Pont fessier deux jambes.", hard:"Épaules sur un banc.",
+    alt:["Hip thrust","Kickback"], yt:"pont fessier unilatéral technique"},
+  intervalles:{n:"Intervalles sur tapis", m:["Cardio","Jambes"],
+    set:"Note tes deux réglages avant de commencer : un rythme rapide (pente ou vitesse) et un rythme lent.",
+    st:["Échauffe-toi 3 minutes en marchant.","Alterne 1 minute rapide et 1 minute lente.","Rapide = tu peux dire quelques mots, pas une phrase.","Termine par 2 minutes de marche lente."],
+    b:"Respiration rapide pendant l’effort, tu récupères pendant la minute lente.",
+    err:["Partir trop fort et finir épuisée.","Se tenir aux barres."],
+    easy:"30 s rapide / 90 s lent.", hard:"Ajoute 2 intervalles.",
+    alt:["Vélo en intervalles","Rameur en intervalles"], yt:"intervalles tapis de course marche inclinée"},
+  kbswing:{n:"Kettlebell swing", m:["Fessiers","Ischios","Cardio"],
+    set:"Pieds un peu plus larges que les hanches, kettlebell au sol devant toi.",
+    st:["Attrape le kettlebell à deux mains et fais-le passer entre les jambes en poussant les hanches en arrière.","Pousse les hanches vers l’avant d’un coup sec : c’est la hanche qui lance le kettlebell, pas les bras.","Il monte jusqu’à hauteur de poitrine, bras tendus et détendus.","Laisse-le redescendre et enchaîne."],
+    b:"Souffle fort à chaque poussée de hanches.",
+    err:["Faire un squat au lieu de pousser les hanches.","Lever le kettlebell avec les bras.","Dos arrondi."],
+    easy:"Pont fessier rapide au sol.", hard:"Kettlebell plus lourd.",
+    alt:["Pont fessier dynamique","Good morning"], yt:"kettlebell swing technique débutant"},
+  trx:{n:"Rowing TRX (sangles)", m:["Dos","Biceps"],
+    set:"Tiens les poignées, recule les pieds et penche-toi en arrière, corps droit, bras tendus.",
+    st:["Gaine le corps comme une planche.","Tire la poitrine vers les poignées en serrant les omoplates.","Redescends lentement.","Plus tes pieds avancent, plus c’est dur."],
+    b:"Souffle en tirant.",
+    err:["Fesses qui tombent.","Épaules qui montent."],
+    easy:"Recule les pieds pour être plus droite.", hard:"Avance les pieds.",
+    alt:["Rowing haltère","Tirage horizontal"], yt:"trx row technique"},
+  fentesmarchees:{n:"Fentes marchées", m:["Fessiers","Cuisses"],
+    set:"Debout, avec un espace de 10 mètres devant toi. Sans charge ou haltères légers.",
+    st:["Fais un grand pas en avant et descends, genou arrière près du sol.","Pousse dans le talon avant pour avancer et ramener l’autre jambe devant.","Enchaîne en avançant.","Buste droit, regard devant."],
+    b:"Inspire en descendant, souffle en remontant.",
+    err:["Pas trop courts.","Genou avant qui rentre vers l’intérieur."],
+    easy:"Fentes sur place en te tenant.", hard:"Haltères en main.",
+    alt:["Fente arrière","Step-up"], yt:"fentes marchées technique"},
+  mountain:{n:"Mountain climbers", m:["Abdominaux","Cardio"],
+    set:"Position de pompe, mains sous les épaules.",
+    st:["Ramène un genou vers la poitrine, puis l’autre, en alternant.","Garde les fesses à hauteur des épaules.","Va à un rythme que tu tiens 30 secondes."],
+    b:"Respiration rapide et régulière.",
+    err:["Fesses trop hautes.","Mains trop en avant."],
+    easy:"Mains sur un banc, rythme lent.", hard:"Rythme plus rapide.",
+    alt:["Montées de genoux","Planche"], yt:"mountain climbers technique"},
+  pompes:{n:"Pompes", m:["Pectoraux","Triceps","Gainage"],
+    set:"Mains un peu plus larges que les épaules. Au sol, sur les genoux, ou mains sur un banc (pompes inclinées).",
+    st:["Corps gainé et droit de la tête aux talons (ou aux genoux).","Descends la poitrine vers le sol, coudes à 45° du corps.","Pousse le sol pour remonter.","Plus les mains sont hautes (banc, mur), plus c’est facile."],
+    b:"Inspire en descendant, souffle en poussant.",
+    err:["Fesses en l’air ou ventre qui tombe.","Coudes complètement écartés."],
+    easy:"Contre un mur ou un banc.", hard:"Au sol, sur les pieds.",
+    alt:["Développé couché haltères","Machine développé"], yt:"pompes inclinées débutante technique"},
+  rowingpoulie:{n:"Rowing poulie basse (tirage horizontal)", m:["Dos","Biceps"],
+    set:"Assise, pieds sur les cales, genoux légèrement fléchis, poignée triangle.",
+    st:["Buste droit, poitrine sortie.","Tire la poignée vers le nombril en serrant les omoplates.","Pause d’une seconde.","Tends les bras lentement sans arrondir le dos."],
+    b:"Souffle en tirant.",
+    err:["Se balancer d’avant en arrière.","Dos arrondi au retour."],
+    easy:"Moins de charge.", hard:"Pause de 2 secondes.",
+    alt:["Rowing haltère","Rowing machine"], yt:"tirage horizontal poulie basse technique"},
+  stair:{n:"Stairmaster (escalier mécanique)", m:["Fessiers","Cuisses","Cardio"],
+    set:"Choisis un niveau où tu peux monter sans t’accrocher. Commence doucement.",
+    st:["Pose tout le pied sur chaque marche.","Buste droit, mains posées sur les rampes seulement pour l’équilibre.","Pendant le repos, descends ou reste sur la machine au niveau minimum.","Ralentis plutôt que t’arrêter si c’est dur."],
+    b:"Souffle long et régulier, essaie de garder un rythme de respiration.",
+    err:["S’accrocher aux rampes en penchant le buste.","Monter sur la pointe des pieds."],
+    easy:"Niveau plus bas, intervalles plus courts.", hard:"Niveau plus élevé ou repos plus courts.",
+    alt:["Marche inclinée à 15 %","Vraies montées d’escaliers"], yt:"stairmaster débutant conseils"},
+  mollets:{n:"Mollets debout", m:["Mollets"],
+    set:"Debout, l’avant des pieds sur une marche, talons dans le vide. Tiens-toi à un support.",
+    st:["Monte sur la pointe des pieds le plus haut possible.","Pause d’une seconde.","Redescends lentement sous le niveau de la marche."],
+    b:"Respire normalement.",
+    err:["Rebondir."],
+    easy:"Au sol, sans marche.", hard:"Une jambe à la fois.",
+    alt:["Machine mollets","Corde à sauter douce"], yt:"mollets debout marche technique"},
+  facepull:{n:"Face pull", m:["Arrière des épaules","Haut du dos","Posture"],
+    set:"Poulie à hauteur du visage, corde. Recule d’un pas, bras tendus.",
+    st:["Tire la corde vers ton visage en écartant les mains.","Les coudes restent hauts, au niveau des épaules.","Serre les omoplates une seconde.","Reviens lentement."],
+    b:"Souffle en tirant.",
+    err:["Prendre trop lourd et se pencher en arrière.","Coudes qui tombent."],
+    easy:"Avec un élastique.", hard:"Pause de 2 secondes.",
+    alt:["Oiseau avec haltères","Élastique tiré vers le visage"], yt:"face pull technique corde"},
+  farmer:{n:"Farmer walk (marche du fermier)", m:["Avant-bras","Gainage","Posture"],
+    set:"Un haltère lourd dans chaque main, bras le long du corps.",
+    st:["Tiens-toi très droite, épaules basses et en arrière.","Marche à petits pas rapides sur la distance indiquée.","Pose les haltères en pliant les jambes, dos droit."],
+    b:"Respire normalement, ventre gainé.",
+    err:["Se pencher d’un côté.","Hausser les épaules."],
+    easy:"Haltères plus légers.", hard:"Haltères plus lourds ou distance plus longue.",
+    alt:["Planche","Port de kettlebells"], yt:"farmer walk technique"},
+  militaire:{n:"Développé militaire haltères assis", m:["Épaules","Triceps"],
+    set:"Assise sur un banc à dossier vertical, haltères à hauteur d’oreilles, paumes vers l’avant.",
+    st:["Dos collé au dossier, ventre gainé.","Pousse les haltères au-dessus de la tête sans les cogner.","Redescends lentement à hauteur d’oreilles."],
+    b:"Souffle en poussant.",
+    err:["Cambrer fortement le dos.","Descendre trop bas."],
+    easy:"Haltères légers, un bras à la fois.", hard:"Debout.",
+    alt:["Machine développé épaules","Pompes piquées"], yt:"développé militaire haltères assis technique"},
+  pallof:{n:"Pallof press", m:["Abdominaux","Taille (obliques en gainage)"],
+    set:"Poulie à hauteur de poitrine, sur le côté. Tiens la poignée à deux mains contre ta poitrine, pieds largeur de hanches.",
+    st:["La poulie tire vers le côté : tu résistes, ton buste ne tourne pas.","Tends les bras devant toi lentement.","Tiens 2 secondes, puis ramène.","Fais toutes les répétitions, puis change de côté."],
+    b:"Souffle en tendant les bras.",
+    err:["Laisser le buste tourner.","Charge trop lourde."],
+    easy:"Avec un élastique léger.", hard:"Pause de 5 secondes bras tendus.",
+    alt:["Planche latérale","Dead bug"], yt:"pallof press technique"}
+};
+/* exercice du programme → fiche(s) */
+const GUIDE_OF = {
+  "Hip thrust (barre ou machine)":["hipthrust"], "Hip thrust « pump »":["hipthrust"], "Squat gobelet":["gobletsquat"],
+  "Fente arrière haltères":["fentearriere"], "Fente arrière sans charge":["fentearriere"], "Abduction machine":["abduction"],
+  "Kickback à la poulie":["kickback"], "Marche inclinée":["marche"], "Tapis incliné":["marche"],
+  "Tirage vertical prise large":["tirage"], "Tirage vertical":["tirage"], "Tirage vertical prise serrée":["tirage"],
+  "Rowing haltère un bras":["rowinghaltere"], "Développé incliné haltères":["devincline"], "Développé couché haltères":["devcouche"],
+  "Élévations latérales":["elevlat"], "Superset curl + extension triceps":["curl","triceps"], "Superset triceps + curl":["triceps","curl"],
+  "Planche + dead bug":["planche","deadbug"], "Planche":["planche"], "Dead bug":["deadbug"], "Vélo ou elliptique":["velo"],
+  "Soulevé de terre roumain haltères":["rdl"], "Presse à cuisses pieds hauts":["presse"], "Presse à cuisses légère":["presse"],
+  "Step-up sur banc":["stepup"], "Step-up sur marche basse":["stepup"], "Leg curl":["legcurl"], "Pont fessier unilatéral":["pontuni"],
+  "Intervalles sur tapis":["intervalles"], "Intervalles tapis":["intervalles"],
+  "Circuit 6 exercices":["gobletsquat","pompes","kbswing","trx","fentesmarchees","mountain"],
+  "Stairmaster par intervalles":["stair"], "Mollets debout":["mollets"], "Pompes (inclinées si besoin)":["pompes"],
+  "Rowing poulie basse":["rowingpoulie"], "Face pull":["facepull"], "Farmer walk":["farmer"],
+  "Développé militaire haltères assis":["militaire"], "Pallof press":["pallof"]
+};
+
+/* ===================== QUESTIONS / RÉPONSES COMMUNES ===================== */
+/* c : catégorie · q : question · k : mots-clés · a : réponse ({name} {kcal} {Pg} {steps} {water} {goal} sont remplacés) */
+const FAQ_COMMON = [
+  // ---- Entraînement
+  {c:"Entraînement", q:"Combien de temps dure une séance ?", k:"duree temps combien minutes seance longue", a:"Entre 50 et 65 minutes, échauffement et cardio compris. Si tu as moins de temps, garde les 3 premiers exercices (les plus importants) et raccourcis le cardio."},
+  {c:"Entraînement", q:"Je n’ai que 30 minutes aujourd’hui", k:"30 minutes peu temps presse rapide court aujourd dispo", a:"Fais l’échauffement en 3 minutes, puis seulement les 3 premiers exercices de ta séance avec 60 s de repos. Termine par 5 minutes de cardio si tu peux. Une séance courte vaut toujours mieux qu’une séance sautée."},
+  {c:"Entraînement", q:"J’ai raté une séance, je fais quoi ?", k:"rate manque oublie seance sautee loupe rattraper", a:"Pas de panique, et pas de double séance. Décale simplement : fais la séance ratée le lendemain et continue dans l’ordre. Si la semaine est trop chargée, 3 séances bien faites suffisent cette semaine-là."},
+  {c:"Entraînement", q:"Je peux faire deux séances le même jour ?", k:"deux seances meme jour double rattraper", a:"Non, c’est contre-productif : la fatigue fait baisser la qualité et augmente le risque de blessure. Mieux vaut décaler la séance au lendemain."},
+  {c:"Entraînement", q:"Quelle charge choisir ?", k:"charge poids kilos lourd leger choisir haltere combien prendre", a:"Prends une charge avec laquelle tu fais toutes les répétitions demandées en gardant la bonne technique, et où il te resterait 2 ou 3 répétitions « en réserve ». Si tu finis facilement, c’est trop léger. Si la technique se dégrade, c’est trop lourd."},
+  {c:"Entraînement", q:"Quand augmenter les charges ?", k:"augmenter progresser charge plus lourd progression quand", a:"Quand tu réussis toutes les séries et toutes les répétitions avec une bonne technique deux séances de suite, ajoute 1 à 2 kg (ou le plus petit cran de la machine). Note tes charges dans ton téléphone pour suivre ta progression."},
+  {c:"Entraînement", q:"C’est quoi « répétitions en réserve » ?", k:"repetitions reserve rir signifie veut dire", a:"C’est le nombre de répétitions que tu pourrais encore faire à la fin d’une série. « 2 en réserve » veut dire : tu t’arrêtes alors que tu pourrais en faire encore 2 proprement. Ça permet de progresser sans s’épuiser ni se blesser."},
+  {c:"Entraînement", q:"Combien de temps de repos entre les séries ?", k:"repos pause entre series combien temps recuperation", a:"Le temps est indiqué sous chaque exercice (45 à 90 secondes). Le bouton « Lancer la séance » lance le minuteur pour toi et sonne à la fin du repos."},
+  {c:"Entraînement", q:"J’ai des courbatures, je m’entraîne quand même ?", k:"courbatures douleur musculaire mal muscles lendemain", a:"Oui, si ce sont de simples courbatures : bouger aide même à les faire passer. Choisis « Fatiguée » dans « Ta forme aujourd’hui » pour alléger la séance. Une douleur vive, articulaire ou qui empire, c’est différent : repos et avis d’un médecin."},
+  {c:"Entraînement", q:"J’ai mal au genou ou au dos pendant un exercice", k:"mal genou dos douleur articulation lombaires bless", a:"Arrête l’exercice tout de suite. Vérifie la technique avec la fiche « Comment faire » et baisse la charge. Si la douleur revient, remplace l’exercice (bouton ↻) et parles-en à un médecin ou un kiné. Une douleur n’est jamais normale, contrairement à la sensation de brûlure musculaire."},
+  {c:"Entraînement", q:"Une machine est prise, je fais quoi ?", k:"machine prise occupee pas disponible remplacer", a:"Passe à l’exercice suivant et reviens après, ou clique sur ↻ à côté de l’exercice pour voir les remplacements possibles. Chaque fiche « Comment faire » liste aussi deux alternatives."},
+  {c:"Entraînement", q:"Je peux faire plus de cardio pour aller plus vite ?", k:"plus cardio vite accelerer perdre rapidement", a:"Un peu, oui : ajouter 10 minutes de marche inclinée ou 2 000 pas par jour aide. Mais doubler le cardio fatigue, donne faim et fait souvent craquer. Les pas au quotidien ({steps}) sont le levier le plus efficace et le plus facile à tenir."},
+  {c:"Entraînement", q:"Le cardio, avant ou après la musculation ?", k:"cardio avant apres musculation ordre", a:"Après. Tu fais la musculation quand tu as le plus d’énergie, puis le cardio. Seule exception : 5 minutes de cardio léger au début pour l’échauffement."},
+  {c:"Entraînement", q:"Comment bien s’échauffer ?", k:"echauffement echauffer debut commencer", a:"Suis l’échauffement écrit en haut de chaque séance (5 à 8 minutes). Puis fais une première série très légère du premier exercice pour répéter le geste."},
+  {c:"Entraînement", q:"Faut-il s’étirer ?", k:"etirement etirer souplesse stretching", a:"Ce n’est pas obligatoire pour les résultats, mais 5 minutes d’étirements doux après la séance font du bien et aident à se détendre. Évite les étirements forcés avant la séance."},
+  {c:"Entraînement", q:"Je peux changer les jours de séance ?", k:"changer jours ordre planning semaine decaler", a:"Oui. L’important est de garder l’ordre des séances et d’éviter de faire deux séances jambes deux jours de suite. Par exemple lundi, mardi, jeudi, samedi ou mardi, mercredi, vendredi, dimanche."},
+  {c:"Entraînement", q:"J’ai peur du regard des autres à la salle", k:"peur regard gene honte timide salle juge", a:"C’est très fréquent, et en réalité chacun est concentré sur sa propre séance. Va à la salle en heures creuses au début, avec tes écouteurs, et utilise le mode séance sur ton téléphone : tu sais exactement quoi faire, et ça se voit."},
+  {c:"Entraînement", q:"Je dois faire des abdos pour avoir le ventre plat ?", k:"abdos ventre plat abdominaux crunch", a:"Les abdos renforcent et gainent la taille, mais ne font pas fondre la graisse du ventre. C’est la perte de poids globale qui l’affine. Le gainage du programme (planche, dead bug) suffit."},
+  {c:"Entraînement", q:"Je peux faire du sport pendant mes règles ?", k:"regles menstruations cycle douleurs ventre", a:"Oui, si tu te sens bien. Les jours difficiles, choisis « Fatiguée » pour alléger la séance, ou remplace-la par 30 minutes de marche. C’est aussi normal d’avoir 1 à 2 kg d’eau en plus sur la balance à ce moment-là."},
+  {c:"Entraînement", q:"Je ne suis pas essoufflée, ça marche quand même ?", k:"essoufflee transpire pas assez facile efficace", a:"Oui. La musculation n’a pas besoin d’essouffler : c’est la qualité des répétitions qui compte. Si une série te paraît vraiment facile, augmente la charge à la séance suivante."},
+  {c:"Entraînement", q:"Je fais quoi les jours de repos ?", k:"repos jour off sans seance recuperation", a:"Tu marches pour faire tes pas ({steps}), tu dors bien et tu manges normalement ton plan. Pas besoin de manger moins les jours de repos."},
+  // ---- Nutrition
+  {c:"Nutrition", q:"Combien de calories je dois manger ?", k:"calories combien kcal manger par jour", a:"Ton objectif est de {kcal} kcal par jour, avec {Pg} g de protéines. C’est un déficit doux : tu perds du gras sans perdre ton muscle ni ton énergie."},
+  {c:"Nutrition", q:"Je dois peser tout ce que je mange ?", k:"peser balance cuisine compter calories application", a:"Pendant 3 à 4 semaines, c’est le meilleur moyen d’apprendre les bonnes portions. Après, tu sauras estimer à l’œil avec la règle de l’assiette (½ légumes, ¼ protéines, ¼ féculents) et tu pourras arrêter."},
+  {c:"Nutrition", q:"J’ai faim le soir", k:"faim soir fringale affamee dinner diner nuit", a:"Garde une collation protéinée vers 16-17h, commence le dîner par une soupe de légumes ou une salade, et bois de l’eau. Si la faim reste forte plusieurs jours de suite, dis-le : on déplacera des calories du midi vers le soir."},
+  {c:"Nutrition", q:"Envie de sucre, comment faire ?", k:"sucre envie chocolat gateau sucre grignoter craving", a:"Prévois-le au lieu de lutter : 1 ou 2 carrés de chocolat noir, un fruit ou un yaourt avec un peu de miel rentrent dans ta marge plaisir. Les envies baissent nettement quand tu manges assez de protéines et que tu dors bien."},
+  {c:"Nutrition", q:"Je grignote, comment arrêter ?", k:"grignoter grignotage arreter snack", a:"Mange à heures fixes, avec une protéine à chaque repas. Ne garde pas de grignotage à portée de main. Et quand l’envie arrive, attends 10 minutes avec un grand verre d’eau ou un thé : souvent, elle passe."},
+  {c:"Nutrition", q:"Quelles collations choisir ?", k:"collation gouter encas snack idee", a:"Fromage blanc ou skyr + fruit, un shaker de whey, des tranches de blanc de dinde + pomme, un œuf dur, une poignée d’amandes (15 g). Elles sont aussi dans l’onglet Nutrition."},
+  {c:"Nutrition", q:"Je peux manger au restaurant ?", k:"restaurant resto sortir manger dehors", a:"Oui. Choisis une viande ou un poisson grillé, demande des légumes à la place d’une partie des frites, et la sauce à part. Un dessert ou un verre, mais pas les deux. Et ensuite, tu reprends ton plan au repas suivant."},
+  {c:"Nutrition", q:"Que prendre au fast-food ?", k:"fast food mcdo burger kebab pizza", a:"Prends un burger simple ou au poulet grillé, une petite portion de frites ou une salade, et une boisson zéro. Pour une pizza : garde 2-3 parts avec une salade. Ça reste un repas plaisir, une fois par semaine maximum."},
+  {c:"Nutrition", q:"Je peux manger du pain ?", k:"pain baguette tartine", a:"Oui, en le comptant comme un féculent : 40 à 70 g (environ 1/5 de baguette) à la place du riz ou des pâtes du repas. Le pain complet cale plus longtemps."},
+  {c:"Nutrition", q:"Les féculents le soir, ça fait grossir ?", k:"feculents soir grossir glucides pates riz", a:"Non. C’est le total de la journée qui compte, pas l’heure. Des féculents le soir peuvent même aider à mieux dormir."},
+  {c:"Nutrition", q:"Je peux sauter le petit-déjeuner ?", k:"sauter petit dejeuner matin pas faim", a:"Oui, si tu n’as pas faim le matin. Répartis alors les calories et les protéines sur les autres repas. L’important, c’est d’atteindre ton total de protéines ({Pg} g) dans la journée."},
+  {c:"Nutrition", q:"Je n’aime pas un aliment du menu", k:"aime pas aliment poisson remplacer gout", a:"Remplace-le par un aliment de la même famille : poisson ↔ poulet, dinde ou œufs ; riz ↔ pâtes, pommes de terre ou quinoa ; skyr ↔ fromage blanc ou yaourt grec. Le bouton « Autre idée » propose aussi d’autres repas."},
+  {c:"Nutrition", q:"Je suis végétarienne, comment avoir mes protéines ?", k:"vegetarienne vegetarien viande protéines vegan tofu", a:"Œufs, skyr, fromage blanc, yaourt grec, tofu, tempeh, lentilles, pois chiches, edamame, seitan. Une whey (ou protéine végétale) aide à atteindre {Pg} g par jour."},
+  {c:"Nutrition", q:"Combien d’eau boire ?", k:"eau boire hydratation litres", a:"Environ {water} par jour, plus les jours de séance. Le plus simple : une gourde le matin, une l’après-midi. Ton urine doit être claire."},
+  {c:"Nutrition", q:"Café, thé, boissons zéro : c’est autorisé ?", k:"cafe the boissons zero light coca soda", a:"Oui. Café et thé sans sucre, boissons zéro avec modération. Attention au sucre et au lait ajoutés : ils comptent dans tes calories."},
+  {c:"Nutrition", q:"Je peux boire de l’alcool ?", k:"alcool vin biere cocktail soiree verre", a:"Un verre de temps en temps, ça passe. Mais l’alcool apporte des calories sans nourrir, donne faim et abîme le sommeil. Garde-le pour les vraies occasions."},
+  {c:"Nutrition", q:"La whey est-elle obligatoire ?", k:"whey proteine poudre obligatoire shaker", a:"Non. C’est juste pratique pour atteindre tes protéines. Si tu en prends, choisis une whey simple, sans additifs « brûle-graisse »."},
+  {c:"Nutrition", q:"Et les brûle-graisses ou les compléments ?", k:"brule graisse complement pilule detox minceur the", a:"Inutiles, et parfois dangereux. Aucune pilule ne fait perdre du gras de façon significative. Le seul complément vraiment utile du programme, c’est éventuellement la whey."},
+  {c:"Nutrition", q:"Comment faire pendant le Ramadan ?", k:"ramadan jeune iftar ftour shour", a:"Garde tes calories et tes protéines sur la fenêtre de repas : un ftour avec protéines + légumes + féculent, une collation protéinée en soirée, et un shour avec œufs ou skyr et avoine. Entraîne-toi léger (mode « Fatiguée ») avant le ftour, ou plus normalement 1 à 2 heures après. Bois beaucoup entre le ftour et le shour."},
+  {c:"Nutrition", q:"Repas de famille ou fêtes", k:"famille fete noel anniversaire repas invite mariage", a:"Profite du repas sans culpabilité : mange d’abord les protéines et les légumes, une seule assiette, un dessert si tu en as envie. Pas de compensation le lendemain : tu reprends simplement ton plan."},
+  {c:"Nutrition", q:"Je dois manger moins les jours sans séance ?", k:"moins manger jour repos sans entrainement", a:"Non, garde les mêmes calories. C’est plus simple, et c’est pendant le repos que le corps se répare."},
+  // ---- Récupération
+  {c:"Récupération", q:"Je dors mal ou moins de 7 heures", k:"dormir sommeil dors mal insomnie nuit fatigue heures", a:"Le sommeil compte autant que la nutrition : moins de 7 h donne plus faim le lendemain. Écrans coupés 30 minutes avant de dormir, chambre fraîche, heure de coucher fixe, et pas de café après 15 h."},
+  {c:"Récupération", q:"Je suis très fatiguée", k:"fatiguee epuisee pas energie crevee", a:"Choisis « Fatiguée » dans « Ta forme aujourd’hui » : la séance s’allège automatiquement. Si la fatigue dure plus d’une semaine, vérifie ton sommeil et dis-le : on remontera un peu les calories."},
+  {c:"Récupération", q:"Je suis malade, je m’entraîne ?", k:"malade rhume grippe fievre", a:"Fièvre ou symptômes dans la poitrine : repos complet. Petit rhume : une marche ou une séance allégée si tu te sens bien. Reprends normalement dès que tu vas mieux."},
+  // ---- Suivi
+  {c:"Suivi", q:"Tous les combien me peser ?", k:"peser pesee souvent combien fois balance", a:"1 à 2 fois par semaine, le matin à jeun, après les toilettes. Ce qui compte, c’est la tendance sur 2 semaines, pas le chiffre d’un jour."},
+  {c:"Suivi", q:"La balance a pris 1 kg d’un coup", k:"pris kilo balance monte augmente remonte", a:"C’est de l’eau, pas du gras : un repas salé, les règles, une grosse séance ou un mauvais sommeil suffisent. Pour prendre 1 kg de gras, il faudrait manger environ 7 000 kcal de trop. Continue ton plan, ça redescend en 2 à 3 jours."},
+  {c:"Suivi", q:"La balance ne bouge pas", k:"stagne stagnation bouge pas plateau balance bloque", a:"Regarde la moyenne sur 2 semaines et ton tour de taille. Si rien ne bouge pendant 3 semaines, vérifie d’abord la précision des portions et le sommeil, puis ajoute 2 000 pas par jour. On ne descend jamais sous 1 400 kcal."},
+  {c:"Suivi", q:"Comment mesurer mon tour de taille ?", k:"mesurer tour taille mensuration metre ruban", a:"Le matin, à jeun, debout et détendue. Place le mètre ruban au niveau du nombril, bien horizontal, sans serrer. Note-le chaque semaine dans l’onglet Suivi."},
+  {c:"Suivi", q:"Quand vais-je voir des résultats ?", k:"resultats quand voir temps combien semaines", a:"Sur la balance : dès les 2 premières semaines. Dans les vêtements : vers 4 semaines. Sur les photos et dans le miroir : entre 6 et 8 semaines. Prends une photo de face et de profil aujourd’hui, tu seras contente de comparer."},
+  {c:"Suivi", q:"Je peux perdre plus vite ?", k:"plus vite rapide accelerer maigrir vite", a:"Le rythme prévu est déjà soutenu. Aller plus vite fait perdre du muscle, donne faim, fatigue et augmente le risque de reprendre ensuite. Le meilleur accélérateur, c’est la régularité : 4 séances et tes pas chaque semaine."},
+  {c:"Suivi", q:"Ma peau va-t-elle se relâcher ?", k:"peau relache relachement vergetures detendue", a:"Perdre à un rythme régulier, garder du muscle grâce à la musculation, manger assez de protéines et bien s’hydrater aident la peau à suivre. La génétique joue aussi. Si cela t’inquiète, un dermatologue peut te conseiller."},
+  {c:"Suivi", q:"Et la cellulite ?", k:"cellulite peau orange", a:"Elle est normale chez presque toutes les femmes. Elle devient moins visible avec la perte de gras et le renforcement des fessiers et des cuisses, ce que fait justement ton programme."},
+  {c:"Motivation", q:"Je perds ma motivation", k:"motivation demotivee envie plus courage abandonner", a:"Normal : la motivation monte et descend, c’est l’habitude qui fait le travail. Réduis l’objectif du jour (juste l’échauffement et un exercice), coche tes séances et regarde tes badges. Et souviens-toi de pourquoi tu as commencé."},
+  {c:"Motivation", q:"J’ai craqué ce week-end", k:"craque ecart excès weekend trop mange", a:"Un week-end ne défait pas un mois. Pas de jeûne, pas de compensation : tu reprends ton plan dès le prochain repas. La balance montera peut-être 1 ou 2 jours (eau et sel), puis elle redescendra."},
+  {c:"Motivation", q:"Comment rester régulière ?", k:"regulier regularite habitude constante tenir", a:"Fixe tes 4 séances dans ton agenda comme des rendez-vous, prépare ton sac la veille, et prépare tes repas 2 fois par semaine. Le jour où c’est dur, fais la version courte : l’important, c’est de ne pas casser la série."}
+];
+
 /* ===================== COACH ===================== */
-let chat = [], busy = false, coachOff = false;
+let chat = [], busy = false, coachOff = false, libCat = "";
 const msgsEl = $("#msgs");
+const liveCoach = () => !!PIN && !coachOff;
 function addMsg(role, html){ const d = document.createElement("div"); d.className = "msg "+role; d.innerHTML = html; msgsEl.appendChild(d); msgsEl.scrollTop = msgsEl.scrollHeight; return d; }
 function md(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^#+\s*/gm,""); }
+function fill(a){ const p = P[who]; return a.replace(/\{(\w+)\}/g, (m,k)=> ({name:p.name, kcal:p.kcal.toLocaleString("fr-FR"), Pg:p.Pg, steps:p.steps, water:p.water, goal:p.goal})[k] ?? m); }
+function allFaq(){ return (P[who].faq || []).concat(FAQ_COMMON); }
+
+/* ---------- recherche dans les réponses ---------- */
+const STOP = new Set("je j tu il elle on nous vous ils le la les l un une des de du d a au aux et ou mais donc que qui quoi est c ce ca ça cet cette mes mon ma me m te t se s en y pas ne n plus pour par sur avec dans comment pourquoi quand combien quel quelle quels quelles faire fait fais suis es ai as avoir etre peux peut dois doit veux faut bien tres trop alors si coach hui moi toi prendre ok oui non stp svp merci bonjour salut".split(" "));
+const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ");
+const toks = s => norm(s).split(/\s+/).filter(w => w.length > 1 && !STOP.has(w));
+function near(a,b){ if (a === b) return true; const m = Math.min(a.length, b.length); if (m < 4) return false; let i = 0; while (i < m && a[i] === b[i]) i++; return i >= Math.min(5, m); }
+let FAQ_IDX = null;
+function scoreFaq(q){
+  const all = allFaq();
+  if (!FAQ_IDX || FAQ_IDX.n !== all.length) FAQ_IDX = {n: all.length, kw: all.map(f => toks(f.k + " " + f.q))};
+  const qt = [...new Set(toks(q))];
+  const hits = qt.map(w => FAQ_IDX.kw.map(kw => kw.some(k => near(w,k))));
+  const df = hits.map(h => h.filter(Boolean).length);
+  return all.map((f,i) => {
+    let s = 0, n = 0;
+    qt.forEach((w,j) => { if (hits[j][i]){ s += (w.length >= 5 ? 1.5 : 1) / Math.sqrt(df[j]); n++; } });
+    return {f, s, cov: qt.length ? n / qt.length : 0};
+  }).sort((a,b)=>b.s-a.s || b.cov-a.cov);
+}
+function findGuide(q){
+  const n = norm(q); let best = null;
+  Object.entries(GUIDES).forEach(([key,g]) => {
+    const words = toks(g.n).filter(w => w.length >= 4);
+    const hit = words.filter(w => n.includes(w)).length;
+    if (hit && (!best || hit > best.hit)) best = {key, hit};
+  });
+  return best ? best.key : null;
+}
+
+/* ---------- actions comprises sans le coach en direct ---------- */
+function offlineActions(q){
+  const n = norm(q);
+  const kg = q.match(/(\d{2,3}(?:[.,]\d{1,2})?)\s*(?:kg|kilo)/i) || (/(pes|poids|fais|balance)/.test(n) && q.match(/\b(\d{2,3}(?:[.,]\d{1,2})?)\b(?!\s*(?:min|pas|kcal|cal|%|sec|s\b|fois|rep|g\b|ans|cm|km))/i));
+  if (kg){
+    const v = parseFloat(kg[1].replace(",", "."));
+    if (v >= 40 && v <= 150){
+      const prev = latestW(who); addWeight(v, iso(today()));
+      const d = Math.round((v - prev)*10)/10, rest = Math.round((v - P[who].goal)*10)/10;
+      return `C’est noté : **${fmt(v)} kg** aujourd’hui (${d <= 0 ? fmt(-d)+" kg de moins" : "+"+fmt(d)+" kg"} depuis la dernière pesée). Il reste ${fmt(Math.max(0,rest))} kg avant ${P[who].goal} kg. ${d > 0.4 ? "Une hausse d’un jour, c’est de l’eau : regarde la tendance sur 2 semaines." : "Continue comme ça !"}`;
+    }
+  }
+  const se = n.match(/seance\s*(?:n\s*)?([1-4])/);
+  if (se && /(fait|fini|termine|valide|boucle)/.test(n)){
+    const si = +se[1]-1; if (!weekDone(who).includes(si)) toggleDone(si, true);
+    return `Séance ${si+1} validée pour cette semaine. Tu en es à **${weekDone(who).length} / ${P[who].freq}**. Bravo !`;
+  }
+  return null;
+}
+function offlineAnswer(q){
+  const act = offlineActions(q); if (act) return {html: md(act)};
+  const exact = allFaq().find(f => f.q === q); if (exact) return {html: md(fill(exact.a))};
+  const g = findGuide(q);
+  const ranked = scoreFaq(q);
+  if (g && /(comment|faire|explique|comprends|technique|position|geste|quoi|c est)/.test(norm(q)) && !(ranked[0] && ranked[0].s >= 1.5 && ranked[0].cov >= 0.5)){
+    const G = GUIDES[g];
+    return {html: md(`**${G.n}** : ${G.st.join(" ")}`) + `<br><button class="howlink" data-gkey="${g}">Voir la fiche complète</button>`};
+  }
+  if (ranked[0] && ranked[0].s >= 0.8 && ranked[0].cov >= 0.3){
+    const top = ranked[0].f, more = ranked.slice(1,3).filter(r => r.s >= 0.6);
+    let h = `<b>${esc(top.q)}</b>\n` + md(fill(top.a));
+    if (more.length) h += `<div class="sugg" style="padding:8px 0 0">${more.map(r=>`<button data-q="${esc(r.f.q)}">${esc(r.f.q)}</button>`).join("")}</div>`;
+    return {html: h};
+  }
+  const sug = ranked.slice(0,3).filter(r=>r.s>0);
+  return {html: md("Je n’ai pas de réponse toute prête à cette question.") + (sug.length ? `<div class="sugg" style="padding:8px 0 0">${sug.map(r=>`<button data-q="${esc(r.f.q)}">${esc(r.f.q)}</button>`).join("")}</div>` : "") + `<br><button class="howlink" id="openLib">Parcourir toutes les réponses</button>`};
+}
+
 function resetChat(){
   chat = []; msgsEl.innerHTML = ""; busy = false;
-  const p = P[who];
-  addMsg("c", md(`Salut ${p.name} ! Je suis ton coach. Je connais ton programme, ton plan alimentaire et tes pesées. Demande-moi une alternative à un exercice, une idée de repas au resto, ou dis-moi simplement ton poids du jour : je l’enregistre.`));
-  $("#sugg").innerHTML = Object.keys(p.faq).map(q=>`<button data-q="${esc(q)}">${esc(q)}</button>`).join("");
+  const p = P[who]; const faq = allFaq();
+  addMsg("c", md(`Salut ${p.name} ! Je suis ton coach. Pose-moi ta question, choisis-en une ci-dessous ou parcours les ${faq.length} réponses déjà prêtes. Tu peux aussi me dire ton poids du jour (« je fais 74,8 ») : je l’enregistre.`));
+  $("#sugg").innerHTML = (p.faq||[]).slice(0,4).map(f=>`<button data-q="${esc(f.q)}">${esc(f.q)}</button>`).join("") + `<button class="more" id="openLib">Toutes les réponses (${faq.length})</button>`;
   $("#coachSub").textContent = `Coach de ${p.name} · connaît ton programme`;
 }
+
+/* ---------- bibliothèque ---------- */
+function openLib(){ $("#coach").classList.remove("open"); $("#lib").classList.add("open"); $("#libQ").value = ""; libCat = ""; renderLib(); setTimeout(()=>$("#libQ").focus(), 50); }
+function renderLib(){
+  const all = allFaq(); const cats = [...new Set(all.map(f=>f.c))];
+  $("#libCats").innerHTML = [["","Tout"]].concat(cats.map(c=>[c,c])).map(([v,l])=>`<button data-libcat="${esc(v)}" aria-pressed="${v===libCat}">${esc(l)}</button>`).join("");
+  const q = $("#libQ").value.trim();
+  let list = all.filter(f => !libCat || f.c === libCat);
+  if (q){ const sc = new Map(scoreFaq(q).map(r=>[r.f, r.s])); list = list.filter(f=>sc.get(f) > 0 || norm(f.q).includes(norm(q))).sort((a,b)=>sc.get(b)-sc.get(a)); }
+  let html = "", last = null;
+  list.forEach(f => { if (!q && f.c !== last){ html += `<div class="cat">${esc(f.c)}</div>`; last = f.c; } html += `<details><summary>${esc(f.q)}</summary><p>${md(fill(f.a))}</p></details>`; });
+  $("#libList").innerHTML = html || `<p style="color:var(--muted)">Aucune réponse trouvée. Pose la question directement au coach.</p>`;
+}
+$("#libQ").addEventListener("input", renderLib);
+
+/* ---------- fiche exercice ---------- */
+function guideHtml(g, focusAlt){
+  return `<h3>${esc(g.n)}</h3>
+    <div class="chips">${g.m.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>
+    <div class="g-sec"><b class="lab">Installation</b><p>${esc(g.set)}</p></div>
+    <div class="g-sec"><b class="lab">Le mouvement</b><ol>${g.st.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+    <div class="g-sec"><b class="lab">Respiration</b><p>${esc(g.b)}</p></div>
+    <div class="g-sec"><b class="lab">Erreurs à éviter</b><ul>${g.err.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div class="g-two"><div><b>Trop dur ?</b>${esc(g.easy)}</div><div><b>Trop facile ?</b>${esc(g.hard)}</div></div>
+    <div class="g-two"><div class="${focusAlt?'g-alt':''}" style="grid-column:1/-1"><b>Machine prise ou exercice impossible ? Remplace par</b>${g.alt.map(esc).join(" · ")}</div></div>
+    <div class="g-act"><a class="btn ghost" href="https://www.youtube.com/results?search_query=${encodeURIComponent(g.yt)}" target="_blank" rel="noopener">▶ Voir des vidéos de démonstration</a></div>`;
+}
+function openGuide(ex, focusAlt){
+  const keys = Array.isArray(ex) ? ex : GUIDE_OF[ex.n]; if (!keys) return;
+  const title = Array.isArray(ex) ? GUIDES[keys[0]].n : ex.n;
+  $("#guideIn").innerHTML = `<button class="close" data-sheetclose="1" aria-label="Fermer">✕</button>
+    <div class="eyebrow">Comment faire</div><h2>${esc(title)}</h2>
+    ${!Array.isArray(ex) && ex.c ? `<p style="margin:0;color:var(--muted)">${esc(ex.c)}</p>` : ""}
+    ${keys.map(k=>guideHtml(GUIDES[k], focusAlt)).join("")}
+    <div class="g-act"><button class="btn" data-askg="${esc("Je ne comprends pas bien l’exercice « " + title + " », tu peux m’expliquer autrement ?")}">Je ne comprends toujours pas : demander au coach</button></div>`;
+  $("#guide").classList.add("open"); $("#guideIn").scrollTop = 0;
+}
+document.addEventListener("click", e => {
+  const gk = e.target.closest("[data-gkey]"); if (gk) openGuide([gk.dataset.gkey]);
+  if (e.target.classList && e.target.classList.contains("sheet")) e.target.classList.remove("open");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".sheet.open").forEach(x=>x.classList.remove("open")); });
+
+/* ---------- coach en direct (si la clé API est configurée) ---------- */
 function context(){
   const p = P[who]; const ph = p.phases[curPhaseIdx(p)]; const pi = Math.min(curPhaseIdx(p),2);
   const sess = p.sessions.map((s,i)=>`Séance ${i+1} (${s.day}) ${s.title} : ` + s.ex.map(e=>e.n+" "+(e.cardio?e.cardio[pi]:e.p[pi].join("×"))).join(" ; ")).join("\n");
@@ -444,6 +893,7 @@ function context(){
   return `Tu es le coach sportif et nutrition personnel de ${p.name}, avec 10 ans d’expérience. Tu tutoies, tu es chaleureux, direct et concret. Réponds en français, en 120 mots maximum sauf si on te demande plus de détails. Pas de titres markdown ; tu peux utiliser **gras** et des listes courtes avec des tirets.
 Sécurité : jamais moins de 1 400 kcal par jour, pas de jeûne punitif, pas de compléments brûle-graisse, pas de restriction d’eau. Douleur, malaise ou question médicale : conseille de consulter un médecin. Si tu perçois une relation difficile à la nourriture, réponds avec bienveillance et suggère d’en parler à un professionnel.
 Actions : si ${p.name} te donne son poids du jour, commence ta réponse par la balise [POIDS:74.8] (avec son poids, point décimal). Si elle dit avoir fait une séance du programme, commence par [SEANCE:n] avec n de 1 à 4. Ces balises sont invisibles pour elle et enregistrent l’info dans son suivi.
+Pour expliquer un exercice, décris l’installation, le mouvement étape par étape, la respiration et les erreurs fréquentes, avec des images simples.
 
 Date du jour : ${iso(today())} (semaine ${weekNo()} du programme, phase « ${ph.n} » : ${ph.txt})
 ${p.name}, ${p.age} ans, 1,65 m, départ ${p.w0} kg, objectif ${p.goal} kg, poids actuel ${latestW(who)} kg. ${p.profil}
@@ -457,22 +907,20 @@ Pesées : ${w}
 Séances validées cette semaine : ${weekDone(who).map(i=>i+1).join(", ") || "aucune"}.`;
 }
 function applyTags(text){
-  let out = text;
-  const mw = out.match(/\[POIDS:\s*([\d.,]+)\]/i);
+  const mw = text.match(/\[POIDS:\s*([\d.,]+)\]/i);
   if (mw){ if (addWeight(mw[1].replace(",","."), iso(today()))) toast("Pesée enregistrée par le coach"); }
-  const ms = out.match(/\[SEANCE:\s*([1-4])\]/i);
+  const ms = text.match(/\[SEANCE:\s*([1-4])\]/i);
   if (ms){ const si = +ms[1]-1; if (!weekDone(who).includes(si)) toggleDone(si, true); }
-  return out.replace(/\[(POIDS|SEANCE):[^\]]*\]\s*/gi, "");
+  return text.replace(/\[(POIDS|SEANCE):[^\]]*\]\s*/gi, "");
 }
 async function ask(q){
   if (!q || busy) return;
   openCoach();
   addMsg("u", esc(q));
-  const p = P[who];
-  const offline = () => p.faq[q] || "Le coach en direct n’est pas encore activé. En attendant, choisis une des questions proposées juste au-dessus : j’y ai déjà répondu.";
-  if (coachOff || !PIN){
-    setTimeout(()=>addMsg("c", md(PIN ? offline() : (p.faq[q] || "Entre ton code personnel pour discuter avec le coach en direct. En attendant, les questions proposées ont déjà leur réponse."))), 350);
-    if (!PIN) setTimeout(showLock, 900);
+  const exact = allFaq().find(f => f.q === q);
+  if (exact || !liveCoach()){
+    const r = offlineAnswer(q);
+    setTimeout(()=>{ addMsg("c", r.html); }, 300);
     return;
   }
   chat.push({role:"user", content:q});
@@ -481,15 +929,14 @@ async function ask(q){
   try {
     const r = await fetch(CFG.url + "/functions/v1/coach", {method:"POST", headers:{"Content-Type":"application/json", apikey:CFG.key}, body: JSON.stringify({athlete:who, pin:PIN, system:context(), messages:chat})});
     const j = await r.json().catch(()=>({}));
-    if (r.status === 503){ coachOff = true; chat.pop(); bubble.innerHTML = md(offline()); return; }
-    if (r.status === 401){ chat.pop(); bubble.innerHTML = md("Ton code n’est plus reconnu. Entre-le à nouveau."); forgetPin(); return; }
+    if (r.status === 503){ coachOff = true; chat.pop(); bubble.innerHTML = offlineAnswer(q).html; return; }
+    if (r.status === 401){ chat.pop(); forgetPin(); bubble.innerHTML = offlineAnswer(q).html; return; }
     if (!r.ok || !j.text) throw new Error("coach");
-    const clean = applyTags(j.text);
-    bubble.innerHTML = md(clean);
+    bubble.innerHTML = md(applyTags(j.text));
     chat.push({role:"assistant", content:j.text});
   } catch(err){
     chat.pop();
-    bubble.innerHTML = md(p.faq[q] || "Je n’ai pas pu répondre. Vérifie ta connexion et réessaie.");
+    bubble.innerHTML = offlineAnswer(q).html;
   } finally { busy = false; msgsEl.scrollTop = msgsEl.scrollHeight; }
 }
 $("#compose").addEventListener("submit", e=>{ e.preventDefault(); const v = $("#q").value.trim(); if (v){ $("#q").value = ""; ask(v); } });
