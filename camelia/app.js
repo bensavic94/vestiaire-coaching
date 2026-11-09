@@ -1,6 +1,6 @@
 
 /* ===================== DONNÉES ===================== */
-const START = "2026-11-02"; // lundi de la semaine 1
+const START = "2026-11-10"; // jour 1 du programme (semaine 1)
 
 
 const ORDER = [Object.keys(P)[0]];
