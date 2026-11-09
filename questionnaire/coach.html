@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bilans clients · Le Vestiaire</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1d1724">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="q.css">
+<style>
+  .wrap{max-width:1180px}
+  .top-in{max-width:1180px}
+  .layout{display:grid; grid-template-columns:340px 1fr; gap:18px; align-items:start}
+  @media (max-width:860px){.layout{grid-template-columns:1fr} .layout.detail .list{display:none} .layout:not(.detail) .det{display:none}}
+  .list{padding:14px; position:sticky; top:72px; max-height:calc(100vh - 90px); overflow:auto}
+  .tools{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap}
+  .tools .in{padding:9px 12px; font-size:14px}
+  .filters{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px}
+  .filters button{border:1.5px solid var(--line); background:var(--surface-2); border-radius:99px; padding:6px 11px; font-size:13px; font-weight:700; color:var(--muted)}
+  .filters button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+  .item{display:block; width:100%; text-align:left; border:1px solid transparent; background:transparent; border-radius:12px; padding:11px 12px; margin-bottom:4px}
+  .item:hover{background:var(--surface-2)}
+  .item[aria-current="true"]{background:var(--acc-soft); border-color:color-mix(in srgb,var(--acc) 30%,transparent)}
+  .item b{font-family:var(--f-display); font-size:16px}
+  .item small{display:block; color:var(--muted); font-size:12.5px}
+  .tag{display:inline-block; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:99px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); vertical-align:middle; margin-left:6px}
+  .tag.nouveau{background:var(--acc); color:var(--acc-ink); border-color:var(--acc)}
+  .tag.programme_fait{background:var(--acc-soft); color:var(--acc)}
+  .det h1{font-size:32px}
+  .det-head{display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px}
+  .det-head .sp{flex:1}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin:0 0 22px}
+  .kpi{background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:12px 14px}
+  .kpi span{display:block; font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.06em}
+  .kpi b{font-family:var(--f-display); font-size:22px; font-variant-numeric:tabular-nums}
+  .flag{background:var(--bad-soft); color:var(--bad); border-radius:12px; padding:10px 14px; font-weight:700; font-size:14px; margin:0 0 10px}
+  .qa h3{font-size:18px; margin:24px 0 10px; padding-top:18px; border-top:1px solid var(--line)}
+  .qa h3:first-child{border-top:0; padding-top:0; margin-top:0}
+  .qa dl{margin:0; display:grid; grid-template-columns:minmax(160px,38%) 1fr; gap:8px 18px}
+  @media (max-width:560px){.qa dl{grid-template-columns:1fr; gap:2px} .qa dd{margin-bottom:10px}}
+  .qa dt{color:var(--muted); font-size:14px}
+  .qa dd{margin:0; font-weight:600; white-space:pre-wrap}
+  .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  select.in{width:auto; padding:9px 12px}
+  .lock{max-width:420px; margin:8vh auto 0; text-align:center}
+  .lock h1{font-size:30px; margin:8px 0 10px}
+  .lock p{color:var(--muted)}
+  .lock .in{text-align:center; letter-spacing:.3em; font-weight:800; font-size:20px; text-transform:uppercase; margin:12px 0}
+  .empty{color:var(--muted); text-align:center; padding:50px 20px}
+  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--surface); padding:10px 18px; border-radius:99px; font-weight:700; font-size:14px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:50}
+  .toast.on{opacity:1}
+  .back{display:none}
+  @media (max-width:860px){.back{display:inline-block}}
+  .linkbox{display:flex; gap:8px; align-items:center; background:var(--surface-2); border:1px dashed var(--line); border-radius:12px; padding:8px 8px 8px 12px; font-size:13px; margin-bottom:12px}
+  .linkbox code{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .linkbox button{border:0; background:var(--ink); color:var(--surface); border-radius:99px; padding:6px 12px; font-weight:700; font-size:12px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i aria-hidden="true"></i>Le Vestiaire</div>
+    <span class="prog-txt">· Bilans clients</span>
+    <span style="flex:1"></span>
+    <button class="btn ghost" id="logout" hidden style="padding:8px 14px;font-size:13px">Verrouiller</button>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<div class="toast" id="toast"></div>
+<script src="questions.js"></script>
+<script src="coach.js"></script>
+</body>
+</html>

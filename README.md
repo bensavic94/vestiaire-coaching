@@ -6,6 +6,7 @@ Deux pages autonomes, une par athlète, avec programme sport, nutrition, suivi d
 |---|---|---|
 | `aya/` | `vestiaire-aya` | page d’Aya |
 | `camelia/` | `vestiaire-camelia` | page de Camélia |
+| `questionnaire/` | `vestiaire-questionnaire` | bilan d'inscription client (`/`) et espace coach (`/coach`) |
 | `src/` | — | modèle commun et script de génération |
 | `supabase/` | — | base de données (migration) et fonction `coach` |
 
@@ -29,3 +30,10 @@ Deux pages autonomes, une par athlète, avec programme sport, nutrition, suivi d
   Supabase → Edge Functions → Secrets. Optionnel : `COACH_MODEL` (par défaut `claude-haiku-5-5`).
   Sans clé, le coach répond avec les réponses préparées.
 - Changer un code : voir le commentaire en bas de `supabase/migrations/001_coaching_suivi.sql`.
+
+## Questionnaire client
+
+- `questionnaire/index.html` : le bilan à envoyer aux clients (7 étapes, sauvegarde automatique sur le téléphone).
+- `questionnaire/coach.html` (`/coach`) : liste des bilans reçus, protégée par le code coach. Bouton « Copier la fiche pour Claude » pour générer le programme, statut, notes, export Excel.
+- Les questions sont toutes dans `questionnaire/questions.js` : pour en ajouter une, modifier ce fichier puis push.
+- Supabase : table `questionnaire_reponses` (aucune lecture publique). Envoi via `questionnaire_envoyer`, lecture via `questionnaire_liste` / `questionnaire_maj` avec le code coach. Changer le code : voir le bas de `supabase/migrations/002_questionnaire.sql`.
